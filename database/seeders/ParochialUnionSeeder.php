@@ -19,8 +19,8 @@ class ParochialUnionSeeder extends Seeder
         }
 
         ParochialUnion::create([
-            'corporate_name' => 'Igreja Evangélica Luterana de São Paulo',
-            'trade_name' => 'IELSP - UPSP',
+            'corporate_name' => 'Igreja Evangélica Luterana de São João',
+            'trade_name' => 'UP São João',
             'cnpj' => '12345678000190',
             'phone' => '(11) 1234-5678',
             'cellphone' => '(11) 91234-5678',

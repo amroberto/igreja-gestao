@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Community;
 use App\Models\Member;
 use App\Models\User;
+use App\Rules\ValidCpf;
+use App\Services\AsaasService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules;
@@ -32,69 +35,123 @@ class RegisteredUserController extends Controller
      */
     private function removeMasks(array $data): array
     {
-        $data['cnpj'] = preg_replace('/\D/', '', $data['cnpj'] ?? '');
-        $data['phone'] = preg_replace('/\D/', '', $data['phone'] ?? '');
-        $data['cellphone'] = preg_replace('/\D/', '', $data['cellphone'] ?? '');
-        $data['cep'] = preg_replace('/\D/', '', $data['cep'] ?? '');
-        $data['cpf'] = preg_replace('/\D/', '', $data['cpf'] ?? '');
+        $fields = ['cnpj', 'phone', 'cellphone', 'cep', 'cpf'];
+        foreach ($fields as $field) {
+            if (isset($data[$field])) {
+                $data[$field] = preg_replace('/\D/', '', $data[$field]);
+            }
+        }
         return $data;
     }
 
     /**
      * Handle an incoming registration request.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, AsaasService $asaas): RedirectResponse
     {
         try {
+            // Remover máscaras dos dados
             $data = $this->removeMasks($request->all());
             Log::info('Iniciando registro', [
                 'email' => $data['email'],
-                'input' => $request->except('password', 'password_confirmation'),
+                'community_id' => $data['community_id'],
             ]);
 
+            // Validação dos dados
             $request->validate([
                 'name' => ['required', 'string', 'max:255'],
                 'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users'],
-                'cpf' => ['required', 'string', 'size:11', 'unique:members,cpf'],
+                'cpf' => ['required', 'string', 'size:11', 'unique:members,cpf', new ValidCpf],
                 'community_id' => ['required', 'exists:communities,id'],
                 'password' => ['required', 'confirmed', Rules\Password::defaults()],
+                'phone' => ['nullable', 'string', 'size:10'],
+                'cellphone' => ['nullable', 'string', 'size:11'],
+                'cep' => ['nullable', 'string', 'size:8'],
+                'address' => ['nullable', 'string', 'max:255'],
+                'number' => ['nullable', 'string', 'max:20'],
+                'complement' => ['nullable', 'string', 'max:255'],
+                'province' => ['nullable', 'string', 'max:255'],
+                'city' => ['nullable', 'string', 'max:255'],
+                'state' => ['nullable', 'string', 'size:2'],
             ]);
 
-            $user = User::create([
+            // Criar cliente no Asaas
+            $asaasCustomer = $asaas->createCustomer([
                 'name' => $data['name'],
+                'cpfCnpj' => $data['cpf'],
                 'email' => $data['email'],
-                'password' => Hash::make($data['password']),
-                'cpf' => $data['cpf'],
-                'community_id' => $data['community_id'],
-                'user_type' => 'membro',
+                'phone' => $data['phone'] ?? null,
+                'mobilePhone' => $data['cellphone'] ?? null,
+                'address' => $data['address'] ?? null,
+                'addressNumber' => $data['number'] ?? null,
+                'complement' => $data['complement'] ?? null,
+                'province' => $data['province'] ?? null,
+                'postalCode' => $data['cep'] ?? null,
+                'notificationDisabled' => false,
+                'foreignCustomer' => false,
             ]);
 
-            $member = Member::create([
-                'name' => $data['name'],
-                'email' => $data['email'],
-                'user_id' => $user->id,
-                'cpf' => $data['cpf'],
-                'community_id' => $data['community_id'],
-            ]);
+            // Iniciar transação no banco de dados
+            return DB::transaction(function () use ($data, $asaasCustomer, $request) {
+                // Criar usuário
+                $user = User::create([
+                    'name' => $data['name'],
+                    'email' => $data['email'],
+                    'password' => Hash::make($data['password']),
+                    'cpf' => $data['cpf'],
+                    'community_id' => $data['community_id'],
+                    'user_type' => 'membro',
+                ]);
 
-            Log::info('Usuário e membro criados', [
-                'user_id' => $user->id,
-                'member_id' => $member->id,
-            ]);
+                // Verificar se existe um membro com o CPF informado
+                $member = Member::where('cpf', $data['cpf'])->first();
 
-            event(new Registered($user));
+                if ($member) {
+                    // Vincular o usuário ao membro existente
+                    $member->update([
+                        'user_id' => $user->id,
+                        'member_asaas_id' => $asaasCustomer['id'],
+                    ]);
+                } else {
+                    // Criar novo membro
+                    $member = Member::create([
+                        'name' => $data['name'],
+                        'email' => $data['email'],
+                        'user_id' => $user->id,
+                        'cpf' => $data['cpf'],
+                        'community_id' => $data['community_id'],
+                        'member_asaas_id' => $asaasCustomer['id'],
+                    ]);
+                }
 
-            Auth::login($user);
+                // Disparar evento de registro
+                event(new Registered($user));
 
-            return redirect()->route('member.profile.edit', $member->id)
-                ->with('success', 'Cadastro realizado! Por favor, complete seu perfil.');
+                // Fazer login do usuário
+                Auth::login($user);
+
+                return redirect()->route('member.profile.edit', $member->id)
+                    ->with('success', 'Cadastro realizado! Por favor, complete seu perfil.');
+            });
         } catch (\Exception $e) {
+            $errorMessage = $e->getMessage();
+            if (str_contains($errorMessage, 'Chave de API inválida')) {
+                $errorMessage = 'Erro de configuração do serviço de pagamento. Contate o suporte.';
+            } elseif (str_contains($errorMessage, 'CPF inválido')) {
+                $errorMessage = 'O CPF informado é inválido para o serviço de pagamento.';
+            } elseif (str_contains($errorMessage, 'Resposta inválida da API do Asaas')) {
+                $errorMessage = 'Erro no serviço de pagamento: dados inválidos. Verifique os dados e tente novamente.';
+            } else {
+                $errorMessage = 'Erro ao realizar o cadastro. Tente novamente.';
+            }
+
             Log::error('Erro ao registrar usuário', [
-                'error' => $e->getMessage(),
+                'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'email' => $request->email,
             ]);
-            return back()->withErrors(['error' => 'Erro ao realizar o cadastro: ' . $e->getMessage()]);
+
+            return back()->withErrors(['error' => $errorMessage]);
         }
     }
 }
