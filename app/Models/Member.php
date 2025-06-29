@@ -40,7 +40,8 @@ class Member extends Model
         'payment_method',
         'due_day',
         'amount',
-        'observations'
+        'observations',
+        'member_asaas_id'
     ];
 
     protected $casts = [

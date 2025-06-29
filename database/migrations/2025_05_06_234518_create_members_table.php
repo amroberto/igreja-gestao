@@ -41,6 +41,7 @@ return new class extends Migration
             $table->tinyInteger('due_day')->default(5);
             $table->decimal('amount', 8, 2)->default(0.00);
             $table->longText('observations')->nullable();
+            $table->string('member_asaas_id')->nullable()->unique();
             $table->timestamps();
         });
     }
