@@ -1,0 +1,128 @@
+@extends('adminlte::page')
+
+@section('title', __('Editar Entidade Financeira'))
+
+@section('content_header')
+    <h1 class="m-0 text-dark">{{ __('Editar Entidade Financeira') }}</h1>
+@stop
+
+@section('content')
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">{{ __('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ route('admin.financial_entities.index') }}">{{ __('Entidades Financeiras') }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ __('Editar') }}</li>
+        </ol>
+    </nav>
+
+    <!-- Alertas -->
+    @if (session('success'))
+        <x-adminlte-alert theme="success" title="{{ __('Sucesso') }}" dismissable>
+            {{ session('success') }}
+        </x-adminlte-alert>
+    @elseif (session('error'))
+        <x-adminlte-alert theme="danger" title="{{ __('Erro') }}" dismissable>
+            {{ session('error') }}
+        </x-adminlte-alert>
+    @endif
+
+    <!-- Formulário -->
+    <form action="{{ route('admin.financial_entities.update', ['financial_entity' => $financial_entity->id]) }}" method="POST">
+        @csrf
+        @method('PUT')
+        <x-adminlte-card title="{{ __('Editar Entidade Financeira') }}" theme="info" collapsible>
+            <!-- Informações Gerais -->
+            <div class="card card-info card-outline">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-info-circle mr-2"></i>{{ __('Informações Gerais') }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-2 col-sm-12 mb-3">
+                            <label class="form-label">{{ __('ID') }}</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-id-badge"></i></span>
+                                <input type="number" class="form-control" id="id" name="id" value="{{ $financial_entity->id }}" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12 mb-3">
+                            <label class="form-label">{{ __('Nome') }}</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-university"></i></span>
+                                <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" value="{{ old('name', $financial_entity->name) }}" placeholder="{{ __('Digite o nome da entidade') }}" required>
+                            </div>
+                            @error('name')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="col-md-6 col-sm-12 mb-3">
+                            <label class="form-label">{{ __('Comunidade') }}</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-users"></i></span>
+                                <select class="form-control @error('community_id') is-invalid @enderror" id="community_id" name="community_id" required>
+                                    <option value="">{{ __('Selecione uma comunidade') }}</option>
+                                    @foreach ($communities as $community)
+                                        <option value="{{ $community->id }}" {{ old('community_id', $financial_entity->community_id) == $community->id ? 'selected' : '' }}>{{ $community->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            @error('community_id')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botões -->
+            <div class="mb-3">
+                <button type="submit" class="btn btn-info btn-sm"><i class="fas fa-save mr-1"></i> {{ __('Salvar') }}</button>
+                <a href="{{ route('admin.financial_entities.index') }}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left mr-1"></i> {{ __('Voltar') }}</a>
+            </div>
+        </x-adminlte-card>
+    </form>
+</div>
+@stop
+
+@section('css')
+    <style>
+        .card {
+            transition: all 0.3s ease-in-out;
+        }
+        .card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .row div {
+            margin-bottom: 10px;
+        }
+        .btn-sm {
+            margin-right: 5px;
+        }
+    </style>
+@stop
+
+@section('js')
+    <script>
+        $(document).ready(function() {
+            $('form').on('submit', function(e) {
+                let name = $('#name').val().trim();
+                let communityId = $('#community_id').val();
+
+                if (name.length < 3) {
+                    e.preventDefault();
+                    $('#name').addClass('is-invalid');
+                    $('#name').siblings('.invalid-feedback').text('{{ __("O nome da entidade deve ter pelo menos 3 caracteres.") }}');
+                }
+                if (!communityId) {
+                    e.preventDefault();
+                    $('#community_id').addClass('is-invalid');
+                    $('#community_id').siblings('.invalid-feedback').text('{{ __("Selecione uma comunidade.") }}');
+                }
+            });
+        });
+    </script>
+@stop

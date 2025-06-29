@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    font-family: "Source Sans Pro", sans-serif;
+}
+
+.bg-primary { background-color: #1E3A8A; }
+.text-primary { color: #1E3A8A; }
+.bg-secondary { background-color: #F97316; }
+.text-secondary { color: #F97316; }
+.btn-primary {
+    @apply bg-secondary text-white px-4 py-2 rounded hover:bg-orange-600;
+}
+.stellar-background {
+    background: linear-gradient(to bottom, #1E3A8A, #000033);
+    background-image: url('path/to/stars.png');
+    background-size: cover;
+    min-height: 100vh;
+}
