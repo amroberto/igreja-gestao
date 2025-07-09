@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Sec;
 
+use App\Services\AsaasService;
+
 use App\Models\User;
 use App\Models\Member;
 use Barryvdh\DomPDF\PDF;
@@ -37,7 +39,7 @@ class MemberController extends Controller
 
         $accessibleCommunityIds = $communities->pluck('id')->toArray();
 
-        $query = Member::query()->with('community')->whereIn('community_id', $accessibleCommunityIds)->orderBy('name');
+        $query = Member::query()->with('community')->whereIn('community_id', $accessibleCommunityIds)->orderBy('first_name');
         $members = $query->paginate(10);
 
         Log::info('Membros carregados:', [
@@ -77,12 +79,14 @@ class MemberController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request, AsaasService $asaas)
     {
         $data = $this->removeMasks($request->all());
         $member = new Member();
 
-        $member->name = $data['name'];
+        $member->first_name = $data['first_name'];
+        $member->middle_name = $data['middle_name'] ?? '';
+        $member->last_name = $data['last_name'] ?? '';
         $member->cpf = $data['cpf'];
         $member->rg = $data['rg'];
         $member->birth_date = $data['birth_date'];
@@ -107,9 +111,43 @@ class MemberController extends Controller
         $member->due_day = $data['due_day'];
 
         $amount = str_replace(['.', ','], ['', '.'], $data['amount']);
-        $member->amount = (float) $amount;
+        $member->amount = number_format((float) $amount, 2, '.', '');
 
         $member->observations = $data['observations'] ?? '';
+
+        $asaasPayload = [
+            'name' => trim($data['first_name'] . ' ' . ($data['middle_name'] ?? '') . ' ' . $data['last_name']),
+            'cpfCnpj' => $data['cpf'],
+            'email' => $data['email'] ?? null,
+            'phone' => $data['phone'] ?? null,
+            'mobilePhone' => $data['cellphone'] ?? null,
+            'address' => $data['address'] ?? null,
+            'addressNumber' => $data['number'] ?? null,
+            'complement' => $data['complement'] ?? null,
+            'province' => $data['district'] ?? null,
+            'postalCode' => $data['cep'] ?? null,
+        ];
+
+        // Verifica se já há member com CPF (talvez por outro cadastro anterior)
+        $existingMember = Member::where('cpf', $data['cpf'])->whereNotNull('member_asaas_id')->first();
+
+        if ($existingMember) {
+            // Se já tem ID Asaas, tentar atualizar no Asaas
+            try {
+                $asaas->updateCustomer($existingMember->member_asaas_id, $asaasPayload);
+                $member->member_asaas_id = $existingMember->member_asaas_id;
+            } catch (\Exception $e) {
+                Log::warning('Falha ao atualizar cliente Asaas existente.', ['cpf' => $data['cpf'], 'erro' => $e->getMessage()]);
+            }
+        } else {
+            // Criar novo cliente no Asaas
+            try {
+                $asaasCustomer = $asaas->createCustomer($asaasPayload);
+                $member->member_asaas_id = $asaasCustomer['id'] ?? null;
+            } catch (\Exception $e) {
+                Log::error('Erro ao criar cliente no Asaas ao cadastrar membro.', ['cpf' => $data['cpf'], 'erro' => $e->getMessage()]);
+            }
+        }
 
         $member->save();
 
@@ -150,15 +188,22 @@ class MemberController extends Controller
         }
     }
 
-    public function getNameByCode($code)
+    public function getNameByCode($id)
     {
-        $member = Member::where('id', $code)->first();
+        $user = Auth::user();
+        $communityId = $user->community_id;
 
-        if ($member) {
-            return response()->json(['name' => $member->name]);
-        } else {
+        $member = Member::find($id);
+
+        if (!$member) {
             return response()->json(['name' => ''], 404);
         }
+
+        return response()->json([
+            'name' => $member->name,
+            'community_id' => $member->community_id,
+            'belongs_to_user_community' => $member->community_id == $communityId,
+        ]);
     }
 
     /**

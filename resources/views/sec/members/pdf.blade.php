@@ -6,8 +6,10 @@
     <title>{{ __('Detalhes do Membro') }}</title>
     <style>
         @page {
-            margin: 60px 30px 50px 30px; /* Margem para cabeçalho e rodapé */
+            margin: 60px 30px 50px 30px;
+            /* Margem para cabeçalho e rodapé */
         }
+
         body {
             font-family: 'DejaVu Sans', Arial, sans-serif;
             font-size: 9pt;
@@ -15,21 +17,25 @@
             line-height: 1.4;
             margin: 0;
         }
+
         .header {
             text-align: center;
             margin-bottom: 10px;
             border-bottom: 1px solid #ddd;
         }
+
         .header img {
             max-height: 50px;
             vertical-align: middle;
             margin-bottom: 5px;
         }
+
         .header .church-info {
             font-size: 8pt;
             color: #555;
             margin-top: 2px;
         }
+
         .footer {
             position: fixed;
             bottom: -40px;
@@ -41,12 +47,14 @@
             color: #555;
             border-top: 1px solid #ddd;
         }
+
         h1 {
             font-size: 14pt;
             color: #2c3e50;
             text-align: center;
             margin: 20px 0 15px 0;
         }
+
         h3 {
             font-size: 12pt;
             color: #34495e;
@@ -55,6 +63,7 @@
             border-bottom: 1px solid #ddd;
             padding-bottom: 5px;
         }
+
         .card {
             border: 1px solid #ddd;
             border-radius: 5px;
@@ -63,67 +72,82 @@
             background-color: #fff;
             page-break-inside: avoid;
         }
+
         .row {
             display: table;
             width: 100%;
             margin-bottom: 10px;
             clear: both;
         }
+
         .col-md-4 {
             display: table-cell;
             width: 33.33%;
             padding: 5px;
             vertical-align: top;
         }
+
         .col-md-6 {
             display: table-cell;
             width: 50%;
             padding: 5px;
             vertical-align: top;
         }
+
         .col-md-3 {
             display: table-cell;
             width: 25%;
             padding: 5px;
             vertical-align: top;
         }
+
         .col-md-12 {
             display: block;
             width: 100%;
             padding: 5px;
         }
+
         strong {
             display: inline-block;
             width: 120px;
             font-weight: bold;
         }
+
         p {
             margin: 0 0 10px 0;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
         }
-        table, th, td {
+
+        table,
+        th,
+        td {
             border: 1px solid #ddd;
         }
-        th, td {
+
+        th,
+        td {
             padding: 8px;
             text-align: left;
             font-size: 9pt;
         }
+
         th {
             background-color: #f4f4f4;
             font-weight: bold;
         }
+
     </style>
 </head>
 <body>
     <!-- Cabeçalho (apenas na primeira página) -->
     <div class="header">
         @if($parochialUnion->logo)
-            <img src="{{ public_path('storage/' . $parochialUnion->logo) }}" alt="Logo {{ $parochialUnion->trade_name }}" style="max-height: 50px; margin-bottom: 8px;">
+        <img src="{{ public_path('storage/' . $parochialUnion->logo) }}" alt="Logo {{ $parochialUnion->trade_name }}" style="max-height: 50px; margin-bottom: 8px;">
         @endif
         <h2 style="font-size: 14pt; margin: 5px 0;">{{ $parochialUnion->trade_name ?? 'União Paroquial' }}</h2>
         <p style="font-size: 9pt; margin: 0;">{{ $parochialUnion->corporate_name ?? 'Nome corporativo não informado' }}</p>
@@ -148,7 +172,7 @@
             <div class="col-md-6"><strong>{{ __('RG') }}:</strong> {{ formatRg($member->rg) ?? '-' }}</div>
         </div>
         <div class="row">
-            <div class="col-md-6"><strong>{{ __('Gênero') }}:</strong> {{ $member->gender->label() ?? '-' }}</div>
+            <div class="col-md-6"><strong>{{ __('Gênero') }}:</strong> {{ optional($member->gender)->label() ?? '-' }}</div>
             <div class="col-md-6"><strong>{{ __('Data de Nascimento') }}:</strong> {{ $member->birth_date ? \Carbon\Carbon::parse($member->birth_date)->format('d/m/Y') : '-' }}</div>
         </div>
         <div class="row">
@@ -202,8 +226,8 @@
     <div class="card">
         <h3>{{ __('Contribuição Mensal') }}</h3>
         <div class="row">
-            <div class="col-md-6"><strong>{{ __('Método de Envio') }}:</strong> {{ $member->delivery_method ? \App\Enums\DeliveryMethodEnum::tryFrom($member->delivery_method)->label() : '-' }}</div>
-            <div class="col-md-6"><strong>{{ __('Método de Pagamento') }}:</strong> {{ $member->payment_method ? \App\Enums\PaymentMethodEnum::tryFrom($member->payment_method)->label() : '-' }}</div>
+            <div class="col-md-6"><strong>{{ __('Método de Envio') }}:</strong> {{ ($enum = \App\Enums\DeliveryMethodEnum::tryFrom($member->delivery_method)) ? $enum->label() : '-' }}</div>
+            <div class="col-md-6"><strong>{{ __('Método de Pagamento') }}:</strong> {{ ($enum = \App\Enums\PaymentMethodEnum::tryFrom($member->payment_method)) ? $enum->label() : '-' }}</div>
         </div>
         <div class="row">
             <div class="col-md-6"><strong>{{ __('Dia do Mês') }}:</strong> {{ $member->due_day ?? '-' }}</div>
@@ -225,28 +249,28 @@
     <div class="card">
         <h3>{{ __('Histórico de Contribuições') }}</h3>
         @if($member->contributions->isEmpty())
-            <p>{{ __('Nenhuma contribuição registrada.') }}</p>
+        <p>{{ __('Nenhuma contribuição registrada.') }}</p>
         @else
-            <table>
-                <thead>
-                    <tr>
-                        <th>{{ __('Data') }}</th>
-                        <th>{{ __('Comunidade') }}</th>
-                        <th>{{ __('Período') }}</th>
-                        <th>{{ __('Valor') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($member->contributions as $contribution)
-                        <tr>
-                            <td>{{ \Carbon\Carbon::parse($contribution->contribution_date)->format('d/m/Y') }}</td>
-                            <td>{{ $contribution->community->name }}
-                            <td>{{ $contribution->period ?? '-' }}</td>
-                            <td>R$ {{ number_format($contribution->amount, 2, ',', '.') }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+        <table>
+            <thead>
+                <tr>
+                    <th>{{ __('Data') }}</th>
+                    <th>{{ __('Comunidade') }}</th>
+                    <th>{{ __('Período') }}</th>
+                    <th>{{ __('Valor') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($member->contributions as $contribution)
+                <tr>
+                    <td>{{ \Carbon\Carbon::parse($contribution->contribution_date)->format('d/m/Y') }}</td>
+                    <td>{{ $contribution->community->name }}
+                    <td>{{ $contribution->period ?? '-' }}</td>
+                    <td>R$ {{ number_format($contribution->amount, 2, ',', '.') }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
         @endif
     </div>
 

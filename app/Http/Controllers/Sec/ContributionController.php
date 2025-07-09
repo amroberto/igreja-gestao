@@ -17,6 +17,9 @@ use Illuminate\Support\Facades\Auth;
 
 class ContributionController extends Controller
 {
+    private const REQUIRED_DATE_RULE = 'required|date';
+    private const EXISTS_FINANCIAL_ENTITY_RULE = 'exists:financial_entities,id';
+
     public function index()
     {
         $communityId = Auth::user()->community_id;
@@ -49,7 +52,7 @@ class ContributionController extends Controller
             : ($financialEntities->count() > 1 ? $financialEntities->first()->id : null);
 
         // Busca membros da comunidade
-        $members = Member::where('community_id', $communityId)->orderBy('name')->get();
+        $members = Member::where('community_id', $communityId)->orderBy('first_name')->get();
 
         return view('sec.contributions.create', compact('communityId', 'financialEntities', 'defaultFinancialEntityId', 'members'));
     }
@@ -59,62 +62,67 @@ class ContributionController extends Controller
         $user = Auth::user();
         $communityId = $user->community_id;
 
-        // Verifica se o usuário tem uma comunidade associada
-        if (!$communityId) {
-            return redirect()->back()->with('error', 'Usuário não está associado a uma comunidade.');
+        // Garante que o usuário "sec" esteja associado a uma comunidade
+        if (! $communityId) {
+            return redirect()->back()
+                ->with('error', 'Usuário não está associado a uma comunidade.');
         }
 
         // Validação dos campos
         $request->validate([
-            'financial_entity_id' => [
+            'financial_entity_id'            => [
                 'required',
                 'exists:financial_entities,id',
-                function ($attribute, $value, $fail) use ($communityId) {
-                    if (!FinancialEntity::where('id', $value)->where('community_id', $communityId)->exists()) {
-                        $fail('A entidade financeira selecionada é inválida.');
+                function ($attr, $value, $fail) use ($communityId) {
+                    if (! FinancialEntity::where('id', $value)
+                        ->where('community_id', $communityId)
+                        ->exists()) {
+                        $fail('A entidade financeira selecionada é inválida para a sua comunidade.');
                     }
                 },
             ],
-            'contributions' => 'required|array',
-            'contributions.*.member_id' => 'required|exists:members,id',
-            'contributions.*.type' => 'required|in:mensal,periodo',
+            'contributions'                  => 'required|array|min:1',
+            'contributions.*.member_id'      => 'required|exists:members,id',
+            'contributions.*.type'           => 'required|in:mensal,periodo',
             'contributions.*.contribution_date' => 'required|date',
-            'contributions.*.start_date' => 'required|date',
-            'contributions.*.end_date' => 'nullable|date|after_or_equal:contributions.*.start_date',
-            'contributions.*.amount' => 'required|numeric|min:0.01',
+            'contributions.*.start_date'     => 'required|date',
+            'contributions.*.end_date'       => 'nullable|date|after_or_equal:contributions.*.start_date',
+            'contributions.*.amount'         => 'required|numeric|min:0.01',
             'contributions.*.payment_method' => 'required|in:' . implode(',', PaymentMethodEnum::values()),
         ]);
 
         DB::beginTransaction();
+
         try {
             foreach ($request->input('contributions') as $entry) {
-                // Valida membro
-                $member = Member::where('id', $entry['member_id'])->where('community_id', $communityId)->first();
-                if (!$member) {
-                    continue; // Pula se o membro não for da comunidade
-                }
-
-                // Criação da contribuição
                 Contribution::create([
-                    'financial_entity_id' => $request->financial_entity_id,
-                    'member_id' => $member->id,
-                    'community_id' => $communityId,
-                    'type' => $entry['type'],
-                    'contribution_date' => $entry['contribution_date'],
-                    'start_date' => $entry['start_date'],
-                    'end_date' => $entry['type'] === 'periodo' ? ($entry['end_date'] ?? null) : null,
-                    'amount' => $entry['amount'],
-                    'payment_method' => $entry['payment_method'],
-                    'status' => 'confirmed',
+                    'financial_entity_id' => $request->input('financial_entity_id'),
+                    'member_id'           => $entry['member_id'],
+                    'community_id'        => $communityId,           // sempre a comunidade do usuário "sec"
+                    'type'                => $entry['type'],
+                    'contribution_date'   => $entry['contribution_date'],
+                    'start_date'          => $entry['start_date'],
+                    'end_date'            => $entry['type'] === 'periodo'
+                        ? ($entry['end_date'] ?? null)
+                        : null,
+                    'amount'              => $entry['amount'],
+                    'payment_method'      => $entry['payment_method'],
+                    'status'              => 'confirmed',
                 ]);
             }
 
             DB::commit();
-            return redirect()->route('sec.contributions.index')->with('success', 'Contribuições registradas com sucesso!');
-        } catch (\Exception $e) {
-            DB::rollback();
+
+            return redirect()
+                ->route('sec.contributions.index')
+                ->with('success', 'Contribuições registradas com sucesso!');
+        } catch (\Throwable $e) {
+            DB::rollBack();
             Log::error('Erro ao registrar contribuições: ' . $e->getMessage());
-            return redirect()->back()->withErrors(['error' => 'Erro ao registrar contribuições: ' . $e->getMessage()])->withInput();
+
+            return redirect()->back()
+                ->withErrors(['error' => 'Erro ao registrar contribuições.'])
+                ->withInput();
         }
     }
 
@@ -186,8 +194,7 @@ class ContributionController extends Controller
                     }
                 },
             ],
-            'member_id' => 'required|exists:members,id',
-            'contribution_date' => 'required|date',
+            'contribution_date' => self::REQUIRED_DATE_RULE,
             'amount' => 'required|numeric|min:0.01',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
@@ -252,8 +259,8 @@ class ContributionController extends Controller
                     }
                 },
             ],
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
+            'start_date' => self::REQUIRED_DATE_RULE,
+            'end_date' => self::REQUIRED_DATE_RULE . '|after_or_equal:start_date',
         ]);
 
         $communityId = Auth::user()->community_id;
@@ -327,8 +334,9 @@ class ContributionController extends Controller
         $request->validate([
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
+            'start_date' => self::REQUIRED_DATE_RULE,
+            'end_date' => self::REQUIRED_DATE_RULE . '|after_or_equal:start_date',
         ]);
-
         $communityId = Auth::user()->community_id;
 
         $contributions = Contribution::with(['member', 'financial_entity'])

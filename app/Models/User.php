@@ -13,7 +13,15 @@ class User extends Authenticatable
 {
     use Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'user_type', 'cpf', 'community_id', 'status'];
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'user_type',
+        'cpf',
+        'community_id',
+        'status'
+    ];
 
     // Relacionamento: Um User pode ter vários Members
 

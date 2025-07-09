@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\GenderEnum;
 use App\Models\Contribution;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -12,8 +13,13 @@ class Member extends Model
 {
     /** @use HasFactory<\Database\Factories\MemberFactory> */
     use HasFactory;
+
+    use SoftDeletes;
+    
     protected $fillable = [
-        'name',
+        'first_name',
+        'middle_name',
+        'last_name',
         'cpf',
         'rg',
         'birth_date',
@@ -76,4 +82,19 @@ class Member extends Model
       {
           return $this->hasMany(Contribution::class);
       }
+
+    public function getNameAttribute()
+    {
+        $nameParts = [$this->first_name];
+
+        if ($this->middle_name) {
+            $nameParts[] = $this->middle_name;
+        }
+
+        if ($this->last_name) {
+            $nameParts[] = $this->last_name;
+        }
+
+        return implode(' ', $nameParts);
+    }
 }

@@ -179,7 +179,26 @@
                         <tr>
                             <td>{{ $contribution->contribution_date ? $contribution->contribution_date->format('d/m/Y') : 'N/A' }}</td>
                             <td>{{ $contribution->community ? $contribution->community->name : 'N/A' }}</td>
-                            <td>{{ $contribution->payment_method ?: 'N/A' }}</td>
+                            <td>
+                                @if ($contribution->payment_method)
+                                @php
+                                // Se for string, converte para enum, se já for enum, usa direto
+                                $paymentMethod = $contribution->payment_method;
+
+                                if (is_string($paymentMethod)) {
+                                try {
+                                $paymentMethod = \App\Enums\PaymentMethodEnum::from($paymentMethod);
+                                } catch (\ValueError $e) {
+                                $paymentMethod = null;
+                                }
+                                }
+
+                                echo $paymentMethod?->label() ?? 'N/A';
+                                @endphp
+                                @else
+                                N/A
+                                @endif
+                            </td>
                             <td>{{ $contribution->period ?: 'N/A' }}</td>
                             <td>R$ {{ number_format($contribution->amount, 2, ',', '.') }}</td>
                         </tr>

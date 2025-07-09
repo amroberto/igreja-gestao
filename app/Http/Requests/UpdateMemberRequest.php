@@ -17,7 +17,9 @@ class UpdateMemberRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'middle_name' => ['nullable', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
             'cpf' => ['required', 'digits:11', 'unique:members,cpf,' . $this->member->id],
             'rg' => ['nullable', 'string', 'max:20'],
             'birth_date' => ['nullable', 'date', 'before:today'],
@@ -40,11 +42,30 @@ class UpdateMemberRequest extends FormRequest
             'is_contributor' => ['required', 'boolean'],
             'father_name' => ['nullable', 'string', 'max:255'],
             'mother_name' => ['nullable', 'string', 'max:255'],
-            'delivery_method' => ['nullable', Rule::in(\App\Enums\DeliveryMethodEnum::getValues())],
-            'payment_method' => ['nullable', Rule::in(\App\Enums\PaymentMethodEnum::getValues())],
+            'delivery_method' => ['required', Rule::in(\App\Enums\DeliveryMethodEnum::getValues())],
+            'payment_method' => ['required', Rule::in(\App\Enums\PaymentMethodEnum::getValues())],
             'due_day' => ['required', 'integer', 'between:1,31'],
             'status' => ['required|string|in:ativo,inativo'],
             'amount' => ['nullable', 'numeric', 'min:0'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'cpf.required' => 'O CPF é obrigatório.',
+            'cpf.digits' => 'O CPF deve ter 11 dígitos.',
+            'cpf.unique' => 'Já existe um membro cadastrado com este CPF.',
+            'cep.digits' => 'O CEP deve ter 8 dígitos.',
+            'due_day.between' => 'O dia de vencimento deve estar entre 1 e 31.',
+            'amount.numeric' => 'O valor deve ser um número.',
+            'amount.min' => 'O valor não pode ser negativo.',
+            'status.required' => 'O status é obrigatório.',
+            'status.in' => 'O status deve ser "ativo" ou "inativo".',
+            'delivery_method.required' => 'O método de entrega é obrigatório.',
+            'delivery_method.in' => 'O método de entrega selecionado é inválido.',
+            'payment_method.in' => 'O método de pagamento selecionado é inválido.',
+            'payment_method.required' => 'O método de pagamento é obrigatório.',
         ];
     }
 

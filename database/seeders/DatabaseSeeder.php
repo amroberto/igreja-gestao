@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             CommunitySeeder::class,
             FinancialEntitySeed::class,
             UsersTableSeeder::class,
+            MemberSeeder::class,
         ]);
     }
 }

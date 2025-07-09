@@ -37,12 +37,28 @@
                             <h1 class="h5 mb-3">{{ __('Informações Gerais') }}</h1>
                             <hr>
                             <div class="col-md-6 mb-3">
-                                <label for="name" class="form-label">{{ __('Nome Completo') }}</label>
+                                <label for="first_name" class="form-label">{{ __('Primeiro Nome') }}</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-person"></i></span>
-                                    <input id="name" type="text" name="name" class="form-control" value="{{ old('name', $member->name) }}" required>
+                                    <input id="first_name" type="text" name="first_name" class="form-control" value="{{ old('first_name', $member->first_name) }}" required>
                                 </div>
-                                <x-input-error :messages="$errors->get('name')" class="text-danger small" />
+                                <x-input-error :messages="$errors->get('first_name')" class="text-danger small" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="middle_name" class="form-label">{{ __('Nome do meio') }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                    <input id="middle_name" type="text" name="middle_name" class="form-control" value="{{ old('middle_name', $member->middle_name) }}">
+                                </div>
+                                <x-input-error :messages="$errors->get('first_name')" class="text-danger small" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="last_name" class="form-label">{{ __('Sobrenome') }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                    <input id="last_name" type="text" name="last_name" class="form-control" value="{{ old('last_name', $member->last_name) }}" required>
+                                </div>
+                                <x-input-error :messages="$errors->get('last_name')" class="text-danger small" />
                             </div>
 
                             <div class="col-md-6 mb-3">

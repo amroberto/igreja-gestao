@@ -1,3 +1,4 @@
+
 @extends('adminlte::page')
 
 @section('title', 'Registrar Contribuições')
@@ -46,7 +47,6 @@
     <div id="contribution-entries">
         {{-- Linha de contribuição padrão (index = 0) --}}
         @include('sec.contributions.partials._contribution_entry', ['index' => 0])
-
     </div>
 
     <a href="{{ route('sec.contributions.index') }}" class="btn btn-secondary mt-3">
@@ -60,7 +60,6 @@
     <button type="button" class="btn btn-primary mt-3" id="add-entry-btn">
         <i class="fas fa-plus"></i> Adicionar Linha
     </button>
-    
 </form>
 @stop
 
@@ -70,7 +69,6 @@
         const entriesContainer = document.getElementById('contribution-entries');
         const addEntryBtn = document.getElementById('add-entry-btn');
 
-        // Função para atualizar visibilidade dos campos de data
         function updateDateFields(row) {
             const tipoSelect = row.querySelector('.contribution-type');
             const startDateGroup = row.querySelector('.start-date-group');
@@ -79,7 +77,6 @@
             if (tipoSelect.value === 'mensal') {
                 startDateGroup.style.display = 'block';
                 endDateGroup.style.display = 'none';
-                // Limpar campo end_date para mensal
                 row.querySelector('[name$="[end_date]"]').value = '';
             } else {
                 startDateGroup.style.display = 'block';
@@ -87,17 +84,16 @@
             }
         }
 
-        // Busca o nome do membro pelo código
         function fetchMemberName(input, row) {
-            const code = input.value.trim();
+            const id = input.value.trim();
             const nameInput = row.querySelector('.member-name-display');
 
-            if (code === '') {
+            if (id === '') {
                 nameInput.value = '';
                 return;
             }
 
-            fetch(`/sec/members/name-by-code/${code}`)
+            fetch(`/sec/members/name-by-code/${id}`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Membro não encontrado');
@@ -109,26 +105,22 @@
                 })
                 .catch(() => {
                     nameInput.value = '';
-                    alert('Membro não encontrado para o código informado.');
+                    alert(`Membro com o ID ${id} não foi encontrado.\nVerifique se o número está correto e tente novamente.`);
                 });
         }
 
-        // Delegação de eventos
         entriesContainer.addEventListener('change', function(e) {
-            // Atualizar campos de data
             if (e.target.classList.contains('contribution-type')) {
                 const row = e.target.closest('.contribution-row');
                 updateDateFields(row);
             }
 
-            // Buscar nome do membro
             if (e.target.classList.contains('member-id-input')) {
                 const row = e.target.closest('.contribution-row');
                 fetchMemberName(e.target, row);
             }
         });
 
-        // Remover linha
         entriesContainer.addEventListener('click', function(e) {
             if (e.target.closest('.remove-entry-btn')) {
                 const row = e.target.closest('.contribution-row');
@@ -140,21 +132,18 @@
             }
         });
 
-        // Adicionar nova linha
         addEntryBtn.addEventListener('click', function() {
             const firstRow = entriesContainer.querySelector('.contribution-row');
             const newRow = firstRow.cloneNode(true);
 
-            // Limpar valores
             newRow.querySelectorAll('input, select').forEach(el => {
-                if (el.type === 'text' || el.type === 'number' || el.type === 'date' || el.type === 'month') {
+                if (['text', 'number', 'date', 'month'].includes(el.type)) {
                     el.value = '';
                 } else if (el.tagName === 'SELECT') {
                     el.selectedIndex = 0;
                 }
             });
 
-            // Atualizar índices
             const index = entriesContainer.children.length;
             newRow.querySelectorAll('input, select').forEach(el => {
                 if (el.name) {
@@ -169,9 +158,7 @@
             entriesContainer.appendChild(newRow);
         });
 
-        // Inicializar primeira linha
         updateDateFields(entriesContainer.querySelector('.contribution-row'));
     });
-
 </script>
 @endpush

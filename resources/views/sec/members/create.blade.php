@@ -10,8 +10,8 @@
         </div>
         <div class="col-sm-6">
             <ol class="breadcrumb float-sm-right">
-                <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}"><i class="fas fa-tachometer-alt mr-1"></i>{{ __('Dashboard') }}</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('admin.members.index') }}"><i class="fas fa-users mr-1"></i>{{ __('Membros') }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('sec.dashboard') }}"><i class="fas fa-tachometer-alt mr-1"></i>{{ __('Dashboard') }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('sec.members.index') }}"><i class="fas fa-users mr-1"></i>{{ __('Membros') }}</a></li>
                 <li class="breadcrumb-item active"><i class="fas fa-user-plus mr-1"></i>{{ __('Criar') }}</li>
             </ol>
         </div>
@@ -37,12 +37,12 @@
 @endif
 
 <x-adminlte-card title="{{ __('Dados do Membro') }}" theme="primary" icon="fas fa-user" collapsible>
-    <form action="{{ route('sec.members.store') }}" method="POST">
+    <form action="{{ route('sec.members.store') }}" method="POST" id="memberForm">
         @csrf
         <h5 class="mb-3">{{ __('Informações Pessoais') }}</h5>
         <div class="row mb-4">
-            <div class="col-md-6">
-                <x-adminlte-input name="name" label="{{ __('Nome') }}" value="{{ old('name') }}" required fgroup-class="has-feedback" error-key="name" igroup-size="sm">
+            <div class="col-md-4">
+                <x-adminlte-input name="first_name" label="{{ __('Primeiro Nome') }}" value="{{ old('first_name') }}" required fgroup-class="has-feedback" error-key="first_name" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
                             <i class="fas fa-user"></i>
@@ -50,7 +50,27 @@
                     </x-slot>
                 </x-adminlte-input>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
+                <x-adminlte-input name="middle_name" label="{{ __('Nome do Meio') }}" value="{{ old('middle_name') }}" fgroup-class="has-feedback" error-key="middle_name" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+            <div class="col-md-4">
+                <x-adminlte-input name="last_name" label="{{ __('Sobrenome') }}" value="{{ old('last_name') }}" required fgroup-class="has-feedback" error-key="last_name" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+        </div>
+        <div class="row mb-4">
+            <div class="col-md-6">
                 <x-adminlte-input name="birth_date" label="{{ __('Data de Nascimento') }}" type="date" value="{{ old('birth_date') }}" fgroup-class="has-feedback" error-key="birth_date" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
@@ -59,7 +79,7 @@
                     </x-slot>
                 </x-adminlte-input>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6">
                 <x-adminlte-select name="gender" label="{{ __('Gênero') }}" fgroup-class="has-feedback" error-key="gender" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
@@ -77,7 +97,7 @@
         </div>
         <div class="row mb-4">
             <div class="col-md-3">
-                <x-adminlte-input name="cpf" label="{{ __('CPF') }}" value="{{ old('cpf') }}" required fgroup-class="has-feedback" error-key="cpf" igroup-size="sm">
+                <x-adminlte-input name="cpf" label="{{ __('CPF') }}" id="cpf" value="{{ old('cpf') }}" required fgroup-class="has-feedback" error-key="cpf" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
                             <i class="fas fa-id-card"></i>
@@ -86,7 +106,7 @@
                 </x-adminlte-input>
             </div>
             <div class="col-md-3">
-                <x-adminlte-input name="rg" label="{{ __('RG') }}" value="{{ old('rg') }}" fgroup-class="has-feedback" error-key="rg" igroup-size="sm">
+                <x-adminlte-input name="rg" label="{{ __('RG') }}" id="rg" value="{{ old('rg') }}" fgroup-class="has-feedback" error-key="rg" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
                             <i class="fas fa-id-card"></i>
@@ -94,7 +114,6 @@
                     </x-slot>
                 </x-adminlte-input>
             </div>
-
             <div class="col-md-6">
                 <x-adminlte-select name="community_id_display" label="{{ __('Comunidade') }}" fgroup-class="has-feedback" error-key="community_id" igroup-size="sm" disabled>
                     <x-slot name="prependSlot">
@@ -111,7 +130,7 @@
         <h5 class="mb-3">{{ __('Dados de Contato') }}</h5>
         <div class="row mb-4">
             <div class="col-md-4">
-                <x-adminlte-input name="phone" label="{{ __('Telefone') }}" value="{{ old('phone') }}" fgroup-class="has-feedback" error-key="phone" igroup-size="sm">
+                <x-adminlte-input name="phone" label="{{ __('Telefone') }}" id="phone" value="{{ old('phone') }}" fgroup-class="has-feedback" error-key="phone" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
                             <i class="fas fa-phone"></i>
@@ -120,7 +139,7 @@
                 </x-adminlte-input>
             </div>
             <div class="col-md-4">
-                <x-adminlte-input name="cellphone" label="{{ __('Celular') }}" value="{{ old('cellphone') }}" fgroup-class="has-feedback" error-key="cellphone" igroup-size="sm">
+                <x-adminlte-input name="cellphone" label="{{ __('Celular') }}" id="cellphone" value="{{ old('cellphone') }}" fgroup-class="has-feedback" error-key="cellphone" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
                             <i class="fas fa-mobile-alt"></i>
@@ -142,7 +161,7 @@
         <h5 class="mb-3">{{ __('Endereço') }}</h5>
         <div class="row mb-4">
             <div class="col-md-2">
-                <x-adminlte-input name="cep" label="{{ __('CEP') }}" value="{{ old('cep') }}" fgroup-class="has-feedback" error-key="cep" igroup-size="sm">
+                <x-adminlte-input name="cep" label="{{ __('CEP') }}" id="cep" value="{{ old('cep') }}" fgroup-class="has-feedback" error-key="cep" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
                             <i class="fas fa-map-marker-alt"></i>
@@ -282,7 +301,7 @@
                     </x-slot>
                     <option value="">{{ __('Selecione') }}</option>
                     @foreach (\App\Enums\DeliveryMethodEnum::cases() as $method)
-                    <option value="{{ $method->value }}" {{ old('delivery_method') == $method->value ? 'selected' : '' }}>
+                    <option value="{{ $method->value }}" {{ old('delivery_method', 'online') == $method->value ? 'selected' : '' }}>
                         {{ $method->label() }}
                     </option>
                     @endforeach
@@ -304,7 +323,7 @@
                 </x-adminlte-select>
             </div>
             <div class="col-md-2">
-                <x-adminlte-input name="due_day" label="{{ __('Dia do Mês') }}" type="number" value="{{ old('due_day') }}" min="1" max="31" step="1" required fgroup-class="has-feedback" error-key="due_day" igroup-size="sm">
+                <x-adminlte-input name="due_day" label="{{ __('Dia do Mês') }}" type="number" value="{{ old('due_day', 5) }}" min="1" max="31" step="1" required fgroup-class="has-feedback" error-key="due_day" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
                             <i class="fas fa-calendar-day"></i>
@@ -313,10 +332,10 @@
                 </x-adminlte-input>
             </div>
             <div class="col-md-4">
-                <x-adminlte-input name="amount" label="{{ __('Valor') }}" value="{{ old('amount') }}" fgroup-class="has-feedback" error-key="amount" igroup-size="sm">
+                <x-adminlte-input name="amount" label="{{ __('Valor') }}" id="amount" value="{{ old('amount', '0,00') }}" fgroup-class="has-feedback" error-key="amount" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
-                            <i class="fas fa-money-bill"></i>
+                            R$
                         </div>
                     </x-slot>
                 </x-adminlte-input>
@@ -346,16 +365,19 @@
 @endsection
 
 @section('js')
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
-<script src="https://unpkg.com/imask"></script>
+<script src="https://unpkg.com/imask@7/dist/imask.min.js"></script>
 <script>
     $(document).ready(function() {
-        $('#cellphone').mask('(00) 0 0000-0000');
-        $('#phone').mask('(00) 0000-0000');
-        $('#cep').mask('00000-000');
-        $('#rg').mask('00.000.000-00');
+        // Máscaras para os campos
         $('#cpf').mask('000.000.000-00');
+        $('#cep').mask('00000-000');
+        $('#phone').mask('(00) 0000-0000');
+        $('#cellphone').mask('(00) 0 0000-0000');
+        $('#rg').mask('00.000.000-00');
 
+        // Busca de CEP
         $('#cep').on('blur', function() {
             var cep = $(this).val().replace(/\D/g, '');
             if (cep.length === 8) {
@@ -373,20 +395,33 @@
                 });
             }
         });
-    });
 
-    IMask(document.getElementById('amount'), {
-        mask: 'R$ num'
-        , blocks: {
-            num: {
-                mask: Number
-                , thousandsSeparator: '.'
-                , radix: ','
-                , scale: 2
-                , padFractionalZeros: true
+        // Máscara para o campo amount
+        const amountInput = document.getElementById('amount');
+        const amountMask = IMask(amountInput, {
+            mask: 'R$ num',
+            blocks: {
+                num: {
+                    mask: Number,
+                    thousandsSeparator: '.',
+                    radix: ',',
+                    scale: 2,
+                    padFractionalZeros: true,
+                    normalizeZeros: true,
+                    min: 0
+                }
             }
-        }
-    });
+        });
 
+        // Sanitizar os dados antes do envio
+        $('#memberForm').on('submit', function(e) {
+            $('#cpf').val($('#cpf').val().replace(/\D/g, ''));
+            $('#cep').val($('#cep').val().replace(/\D/g, ''));
+            $('#phone').val($('#phone').val().replace(/\D/g, ''));
+            $('#cellphone').val($('#cellphone').val().replace(/\D/g, ''));
+            $('#rg').val($('#rg').val().replace(/\D/g, ''));
+            $('#amount').val(amountMask.unmaskedValue.replace(',', '.'));
+        });
+    });
 </script>
 @endsection

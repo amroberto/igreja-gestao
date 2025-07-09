@@ -26,13 +26,13 @@
             <!-- Logo -->
             <div class="text-center mb-6">
                 @php
-                    use Illuminate\Support\Facades\Storage;
-                    $paroquialUnion = \App\Models\ParochialUnion::first();
-                    $logoUrl = $paroquialUnion && $paroquialUnion->logo ? Storage::url($paroquialUnion->logo) : null;
-                    $filePath = public_path(str_replace('/storage', 'storage', parse_url($logoUrl ?? '', PHP_URL_PATH)));
-                    if (!$logoUrl || !file_exists($filePath)) {
-                        $logoUrl = asset('images/larachurch.png');
-                    }
+                use Illuminate\Support\Facades\Storage;
+                $paroquialUnion = \App\Models\ParochialUnion::first();
+                $logoUrl = $paroquialUnion && $paroquialUnion->logo ? Storage::url($paroquialUnion->logo) : null;
+                $filePath = public_path(str_replace('/storage', 'storage', parse_url($logoUrl ?? '', PHP_URL_PATH)));
+                if (!$logoUrl || !file_exists($filePath)) {
+                $logoUrl = asset('images/larachurch.png');
+                }
                 @endphp
                 <div class="flex justify-center mb-4">
                     <img src="{{ $logoUrl }}" alt="Logo União Paroquial" class="h-20 w-auto" />
@@ -43,19 +43,19 @@
 
             <!-- Erros -->
             @if (session('error'))
-                <div class="mb-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg">
-                    {{ session('error') }}
-                </div>
+            <div class="mb-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg">
+                {{ session('error') }}
+            </div>
             @endif
             @if ($errors->any())
-                <div class="mb-4 bg-red-100 border border-red-400 text-red-700 p-4 rounded-lg text-sm">
-                    <strong>Erro ao realizar o cadastro:</strong>
-                    <ul class="mt-2 list-disc list-inside">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
+            <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded shadow-sm">
+                <strong>Ops! Encontramos alguns problemas:</strong>
+                <ul class="list-disc list-inside mt-2">
+                    @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
             @endif
 
             <!-- Formulário -->
@@ -64,7 +64,7 @@
 
                 <!-- Nome -->
                 <div>
-                    <x-input-label for="name" :value="__('Nome')" />
+                    <x-input-label for="name" :value="__('Name')" />
                     <div class="relative mt-1">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <svg class="h-5 w-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
@@ -118,7 +118,7 @@
                         <select id="community_id" name="community_id" class="pl-10 w-full rounded border-gray-300 bg-gray-50">
                             <option value="">{{ __('Selecione uma comunidade') }}</option>
                             @foreach (\App\Models\Community::where('id', '!=', 1)->get() as $community)
-                                <option value="{{ $community->id }}" {{ old('community_id') == $community->id ? 'selected' : '' }}>{{ $community->name }}</option>
+                            <option value="{{ $community->id }}" {{ old('community_id') == $community->id ? 'selected' : '' }}>{{ $community->name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -153,9 +153,6 @@
                     <x-input-error :messages="$errors->get('password_confirmation')" />
                 </div>
 
-                <!-- Hidden user type -->
-                <input type="hidden" name="user_type" value="member">
-
                 <!-- Ações -->
                 <div class="flex items-center justify-between mt-6">
                     <a class="text-sm text-blue-600 hover:underline" href="{{ route('login') }}">
@@ -171,7 +168,7 @@
             <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
             <script>
-                $(function () {
+                $(function() {
                     $('#cpf').mask('000.000.000-00');
 
                     function validarCPF(cpf) {
@@ -189,7 +186,7 @@
                         return digito2 === parseInt(cpf[10]);
                     }
 
-                    $('#cpf').on('blur', function () {
+                    $('#cpf').on('blur', function() {
                         const cpf = $(this).val().replace(/\D/g, '');
                         const isValid = validarCPF(cpf);
                         const error = $('#cpf-error');
@@ -202,7 +199,7 @@
                         }
                     });
 
-                    $('#register-form').on('submit', function (e) {
+                    $('#register-form').on('submit', function(e) {
                         const cpf = $('#cpf').val().replace(/\D/g, '');
                         $('#cpf').val(cpf);
                         if (!validarCPF(cpf)) {
@@ -212,6 +209,7 @@
                         }
                     });
                 });
+
             </script>
         </div>
     </div>

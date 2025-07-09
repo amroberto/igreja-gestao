@@ -42,8 +42,8 @@
         @method('PUT')
         <h5 class="mb-3">{{ __('Informações Pessoais') }}</h5>
         <div class="row mb-4">
-            <div class="col-md-6">
-                <x-adminlte-input name="name" label="{{ __('Nome') }}" value="{{ $member->name ?? old('name') }}" required fgroup-class="has-feedback" error-key="name" igroup-size="sm">
+            <div class="col-md-4">
+                <x-adminlte-input name="first_name" label="{{ __('Primeiro Nome') }}" value="{{ $member->first_name ?? old('first_name') }}" required fgroup-class="has-feedback" error-key="first_name" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
                             <i class="fas fa-user"></i>
@@ -51,7 +51,27 @@
                     </x-slot>
                 </x-adminlte-input>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
+                <x-adminlte-input name="middle_name" label="{{ __('Nome do Meio') }}" value="{{ $member->middle_name ?? old('middle_name') }}" fgroup-class="has-feedback" error-key="middle_name" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+            <div class="col-md-4">
+                <x-adminlte-input name="last_name" label="{{ __('Sobrenome') }}" value="{{ $member->last_name ?? old('last_name') }}" required fgroup-class="has-feedback" error-key="last_name" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+        </div>
+        <div class="row mb-4">
+            <div class="col-md-6">
                 <x-adminlte-input name="birth_date" label="{{ __('Data de Nascimento') }}" type="date" value="{{ $member->birth_date ? $member->birth_date->format('Y-m-d') : old('birth_date') }}" fgroup-class="has-feedback" error-key="birth_date" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
@@ -60,7 +80,7 @@
                     </x-slot>
                 </x-adminlte-input>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6">
                 <x-adminlte-select name="gender" label="{{ __('Gênero') }}" fgroup-class="has-feedback" error-key="gender" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
@@ -284,7 +304,7 @@
                     </x-slot>
                     <option value="">{{ __('Selecione') }}</option>
                     @foreach (\App\Enums\DeliveryMethodEnum::cases() as $method)
-                    <option value="{{ $method->value }}" {{ ($member->delivery_method instanceof \App\Enums\DeliveryMethodEnum ? $member->delivery_method->value : $member->delivery_method ?? old('delivery_method')) === $method->value ? 'selected' : '' }}>
+                    <option value="{{ $method->value }}" {{ ($member->delivery_method instanceof \App\Enums\DeliveryMethodEnum ? $member->delivery_method->value : $member->delivery_method ?? old('delivery_method', 'online')) === $method->value ? 'selected' : '' }}>
                         {{ $method->label() }}
                     </option>
                     @endforeach
@@ -306,7 +326,7 @@
                 </x-adminlte-select>
             </div>
             <div class="col-md-2">
-                <x-adminlte-input name="due_day" label="{{ __('Dia do Mês') }}" type="number" value="{{ $member->due_day ?? old('due_day') }}" min="1" max="31" step="1" fgroup-class="has-feedback" error-key="due_day" igroup-size="sm">
+                <x-adminlte-input name="due_day" label="{{ __('Dia do Mês') }}" type="number" value="{{ $member->due_day ?? old('due_day', 5) }}" min="1" max="31" step="1" fgroup-class="has-feedback" error-key="due_day" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
                             <i class="fas fa-calendar-day"></i>
@@ -353,12 +373,14 @@
 <script src="https://unpkg.com/imask@7/dist/imask.min.js"></script>
 <script>
     $(document).ready(function() {
+        // Máscaras para os campos
         $('#cpf').mask('000.000.000-00');
         $('#cep').mask('00000-000');
         $('#phone').mask('(00) 0000-0000');
         $('#cellphone').mask('(00) 0 0000-0000');
         $('#rg').mask('00.000.000-00');
 
+        // Busca de CEP
         $('#cep').on('blur', function() {
             var cep = $(this).val().replace(/\D/g, '');
             if (cep.length === 8) {
@@ -377,22 +399,24 @@
             }
         });
 
+        // Máscara para o campo amount
         const amountInput = document.getElementById('amount');
         const amountMask = IMask(amountInput, {
-            mask: 'R$ num'
-            , blocks: {
+            mask: 'R$ num',
+            blocks: {
                 num: {
-                    mask: Number
-                    , thousandsSeparator: '.'
-                    , radix: ','
-                    , scale: 2
-                    , padFractionalZeros: true
-                    , normalizeZeros: true
-                    , min: 0
+                    mask: Number,
+                    thousandsSeparator: '.',
+                    radix: ',',
+                    scale: 2,
+                    padFractionalZeros: true,
+                    normalizeZeros: true,
+                    min: 0
                 }
             }
         });
 
+        // Sanitizar os dados antes do envio
         $('#memberForm').on('submit', function(e) {
             $('#cpf').val($('#cpf').val().replace(/\D/g, ''));
             $('#cep').val($('#cep').val().replace(/\D/g, ''));
@@ -402,6 +426,5 @@
             $('#amount').val(amountMask.unmaskedValue.replace(',', '.'));
         });
     });
-
 </script>
 @endsection

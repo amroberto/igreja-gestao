@@ -46,8 +46,7 @@ class RegisteredUserController extends Controller
 
     /**
      * Handle an incoming registration request.
-     */
-    public function store(Request $request, AsaasService $asaas): RedirectResponse
+     */ public function store(Request $request, AsaasService $asaas): RedirectResponse
     {
         try {
             // Remover máscaras dos dados
@@ -61,7 +60,18 @@ class RegisteredUserController extends Controller
             $request->validate([
                 'name' => ['required', 'string', 'max:255'],
                 'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users'],
-                'cpf' => ['required', 'string', 'size:11', 'unique:members,cpf', new ValidCpf],
+                'cpf' => [
+                    'required',
+                    'string',
+                    'size:11',
+                    new ValidCpf,
+                    function ($attribute, $value, $fail) {
+                        $member = \App\Models\Member::where('cpf', $value)->first();
+                        if ($member && $member->user_id) {
+                            $fail('Este CPF já está vinculado a um usuário.');
+                        }
+                    },
+                ],
                 'community_id' => ['required', 'exists:communities,id'],
                 'password' => ['required', 'confirmed', Rules\Password::defaults()],
                 'phone' => ['nullable', 'string', 'size:10'],
@@ -75,24 +85,72 @@ class RegisteredUserController extends Controller
                 'state' => ['nullable', 'string', 'size:2'],
             ]);
 
-            // Criar cliente no Asaas
-            $asaasCustomer = $asaas->createCustomer([
-                'name' => $data['name'],
-                'cpfCnpj' => $data['cpf'],
-                'email' => $data['email'],
-                'phone' => $data['phone'] ?? null,
-                'mobilePhone' => $data['cellphone'] ?? null,
-                'address' => $data['address'] ?? null,
-                'addressNumber' => $data['number'] ?? null,
-                'complement' => $data['complement'] ?? null,
-                'province' => $data['province'] ?? null,
-                'postalCode' => $data['cep'] ?? null,
-                'notificationDisabled' => false,
-                'foreignCustomer' => false,
-            ]);
+            // Busca membro pelo CPF
+            $member = Member::where('cpf', $data['cpf'])->first();
 
-            // Iniciar transação no banco de dados
-            return DB::transaction(function () use ($data, $asaasCustomer, $request) {
+            if ($member && $member->member_asaas_id) {
+                // Verifica se cliente existe na API do Asaas
+                $asaasCustomerExists = $asaas->getCustomer($member->member_asaas_id);
+
+                if ($asaasCustomerExists) {
+                    // Atualiza cliente existente no Asaas
+                    $asaasCustomer = $asaas->updateCustomer($member->member_asaas_id, [
+                        'name' => $data['name'],
+                        'cpfCnpj' => $data['cpf'],
+                        'email' => $data['email'],
+                        'phone' => $data['phone'] ?? null,
+                        'mobilePhone' => $data['cellphone'] ?? null,
+                        'address' => $data['address'] ?? null,
+                        'addressNumber' => $data['number'] ?? null,
+                        'complement' => $data['complement'] ?? null,
+                        'province' => $data['province'] ?? null,
+                        'postalCode' => $data['cep'] ?? null,
+                        'notificationDisabled' => false,
+                        'foreignCustomer' => false,
+                    ]);
+                } else {
+                    // Cliente não existe mais, criar novo
+                    $asaasCustomer = $asaas->createCustomer([
+                        'name' => $data['name'],
+                        'cpfCnpj' => $data['cpf'],
+                        'email' => $data['email'],
+                        'phone' => $data['phone'] ?? null,
+                        'mobilePhone' => $data['cellphone'] ?? null,
+                        'address' => $data['address'] ?? null,
+                        'addressNumber' => $data['number'] ?? null,
+                        'complement' => $data['complement'] ?? null,
+                        'province' => $data['province'] ?? null,
+                        'postalCode' => $data['cep'] ?? null,
+                        'notificationDisabled' => false,
+                        'foreignCustomer' => false,
+                    ]);
+                }
+            } else {
+                // Nenhum membro ou member_asaas_id, criar novo cliente no Asaas
+                $asaasCustomer = $asaas->createCustomer([
+                    'name' => $data['name'],
+                    'cpfCnpj' => $data['cpf'],
+                    'email' => $data['email'],
+                    'phone' => $data['phone'] ?? null,
+                    'mobilePhone' => $data['cellphone'] ?? null,
+                    'address' => $data['address'] ?? null,
+                    'addressNumber' => $data['number'] ?? null,
+                    'complement' => $data['complement'] ?? null,
+                    'province' => $data['province'] ?? null,
+                    'postalCode' => $data['cep'] ?? null,
+                    'notificationDisabled' => false,
+                    'foreignCustomer' => false,
+                ]);
+            }
+
+
+            // Separar nome completo em first, middle e last name
+            $fullName = explode(' ', trim($data['name']));
+            $firstName = array_shift($fullName);
+            $lastName = count($fullName) > 0 ? array_pop($fullName) : '';
+            $middleName = count($fullName) > 0 ? implode(' ', $fullName) : '';
+
+            return DB::transaction(function () use ($data, $asaasCustomer, $request, $firstName, $middleName, $lastName) {
                 // Criar usuário
                 $user = User::create([
                     'name' => $data['name'],
@@ -107,20 +165,27 @@ class RegisteredUserController extends Controller
                 $member = Member::where('cpf', $data['cpf'])->first();
 
                 if ($member) {
-                    // Vincular o usuário ao membro existente
+                    // Vincular o usuário ao membro existente e atualizar nome
                     $member->update([
                         'user_id' => $user->id,
                         'member_asaas_id' => $asaasCustomer['id'],
+                        'first_name' => $firstName,
+                        'middle_name' => $middleName,
+                        'last_name' => $lastName,
+                        'email' => $data['email'],
+                        'community_id' => $data['community_id'],
                     ]);
                 } else {
-                    // Criar novo membro
+                    // Criar novo membro com os campos separados
                     $member = Member::create([
-                        'name' => $data['name'],
-                        'email' => $data['email'],
                         'user_id' => $user->id,
                         'cpf' => $data['cpf'],
-                        'community_id' => $data['community_id'],
                         'member_asaas_id' => $asaasCustomer['id'],
+                        'first_name' => $firstName,
+                        'middle_name' => $middleName,
+                        'last_name' => $lastName,
+                        'email' => $data['email'],
+                        'community_id' => $data['community_id'],
                     ]);
                 }
 
