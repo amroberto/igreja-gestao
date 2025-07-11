@@ -6,7 +6,6 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpFoundation\Response;
 
 class CheckSecAccess
@@ -32,6 +31,10 @@ class CheckSecAccess
             'user_id' => Auth::check() ? Auth::user()->id : null,
             'user_type' => Auth::check() ? Auth::user()->user_type : null,
         ]);
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['error' => 'Acesso não autorizado.'], 403);
+        }
 
         return redirect('/dashboard')->with('error', 'Acesso não autorizado.');
     }

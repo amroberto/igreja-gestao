@@ -110,9 +110,9 @@ class AsaasService
             'cpfCnpj' => $data['cpfCnpj'],
             'email' => $data['email'] ?? null,
             'phone' => $data['phone'] ?? null,
-            'mobilePhone' => $data['mobilePhone'] ?? null,
+            'mobilePhone' => $data['cellphone'] ?? null,
             'address' => $data['address'] ?? null,
-            'address-targetedNumber' => $data['addressNumber'] ?? null,
+            'addressNumber' => $data['number'] ?? null,
             'complement' => $data['complement'] ?? null,
             'province' => $data['province'] ?? null,
             'postalCode' => $data['postalCode'] ?? null,
@@ -228,9 +228,9 @@ class AsaasService
             'cpfCnpj' => $payload['cpfCnpj'],
             'email' => $payload['email'] ?? null,
             'phone' => $payload['phone'] ?? null,
-            'mobilePhone' => $payload['mobilePhone'] ?? null,
+            'mobilePhone' => $payload['cellphone'] ?? null,
             'address' => $payload['address'] ?? null,
-            'addressNumber' => $payload['addressNumber'] ?? null,
+            'addressNumber' => $payload['number'] ?? null,
             'complement' => $payload['complement'] ?? null,
             'province' => $payload['province'] ?? null,
             'postalCode' => $payload['postalCode'] ?? null,
@@ -280,12 +280,14 @@ class AsaasService
         return $errorMessage;
     }
 
+
     /**
-     * Consulta um cliente no Asaas por ID.
+     * [Description for getCustomer]
      *
      * @param string $customerId
+     * 
      * @return array|null
-     * @throws \Exception
+     * 
      */
     public function getCustomer(string $customerId): ?array
     {
@@ -314,5 +316,103 @@ class AsaasService
 
             throw new \Exception('Erro ao consultar cliente no Asaas: ' . $e->getMessage());
         }
+    }
+
+    public function createPayment(array $payload): array
+    {
+        $response = $this->client->post('/v3/payments', [
+            'headers' => $this->headers(),
+            'json' => $payload,
+        ]);
+
+        $data = json_decode($response->getBody(), true);
+
+        if (!isset($data['id'])) {
+            throw new \Exception('Erro ao criar pagamento no Asaas');
+        }
+
+        return $data;
+    }
+
+    /**
+     * Armazena um cartão de crédito tokenizado no Asaas.
+     *
+     * @param array $data
+     * @return array
+     * @throws \Exception
+     */
+    public function storeCard(array $data): array
+    {
+        try {
+            if (empty($data['customer']) || empty($data['creditCardToken'])) {
+                throw new \Exception('Parâmetros obrigatórios ausentes: customer ou creditCardToken.');
+            }
+
+            $response = $this->client->post('/v3/myAccount/creditCard', [
+                'headers' => $this->headers(),
+                'json' => [
+                    'customer' => $data['customer'],
+                    'creditCardToken' => $data['creditCardToken'],
+                    // você pode passar 'billingAddress' e outros dados se quiser
+                ]
+            ]);
+
+            $responseData = json_decode($response->getBody()->getContents(), true);
+
+            if (!isset($responseData['id'])) {
+                throw new \Exception('Falha ao registrar cartão: resposta inválida.');
+            }
+
+            return $responseData;
+        } catch (\Exception $e) {
+            Log::error('Erro ao armazenar cartão no Asaas', [
+                'erro' => $e->getMessage(),
+                'data' => $data,
+            ]);
+            throw $e;
+        }
+    }
+
+    public function createPixCharge(array $contribution): array
+    {
+        $payload = [
+            'customer' => $contribution['customer_id'],
+            'billingType' => 'PIX',
+            'value' => $contribution['amount'],
+            'dueDate' => now()->addDays(1)->format('Y-m-d'),
+            'description' => $contribution['description'] ?? 'Contribuição',
+            'externalReference' => $contribution['id'],
+        ];
+
+        return $this->createPayment($payload);
+    }
+
+    public function createBoletoCharge(array $contribution, string $dueDate): array
+    {
+        $payload = [
+            'customer' => $contribution['customer_id'],
+            'billingType' => 'BOLETO_BANCARIO',
+            'value' => $contribution['amount'],
+            'dueDate' => $dueDate,
+            'description' => $contribution['description'] ?? 'Contribuição',
+            'externalReference' => $contribution['id'],
+        ];
+
+        return $this->createPayment($payload);
+    }
+
+    public function payWithCreditCard(array $contribution, array $card): array
+    {
+        $payload = [
+            'customer' => $contribution['customer_id'],
+            'billingType' => 'CREDIT_CARD',
+            'value' => $contribution['amount'],
+            'dueDate' => now()->addDays(1)->format('Y-m-d'),
+            'description' => $contribution['description'] ?? 'Contribuição',
+            'externalReference' => $contribution['id'],
+            'creditCardToken' => $card['token'], // Token do cartão armazenado
+        ];
+
+        return $this->createPayment($payload);
     }
 }

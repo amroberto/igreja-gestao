@@ -2,24 +2,26 @@
 
 namespace App\Http\Controllers\Sec;
 
-use App\Services\AsaasService;
-
 use App\Models\User;
+
 use App\Models\Member;
 use Barryvdh\DomPDF\PDF;
+use App\Enums\GenderEnum;
 use App\Models\Community;
 use App\Enums\UserTypeEnum;
-use App\Enums\GenderEnum;
 use App\Models\Contribution;
 use Illuminate\Http\Request;
 use App\Models\ParochialUnion;
+use App\Services\AsaasService;
 use App\Enums\MaritalStatusEnum;
 use App\Enums\PaymentMethodEnum;
 use App\Enums\DeliveryMethodEnum;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\RedirectResponse;
+use Yajra\DataTables\Facades\DataTables;
 use App\Http\Requests\UpdateMemberRequest;
 
 class MemberController extends Controller
@@ -31,28 +33,15 @@ class MemberController extends Controller
     {
         $user = Auth::user();
         $communities = $user->communities;
-        Log::info('Comunidades carregadas:', ['user_id' => $user->id, 'communities' => $communities->pluck('id')->toArray()]);
-
-        if ($communities->isEmpty()) {
-            return redirect()->route('sec.dashboard')->with('error', 'Nenhuma comunidade associada ao usuário.');
-        }
-
-        $accessibleCommunityIds = $communities->pluck('id')->toArray();
-
-        $query = Member::query()->with('community')->whereIn('community_id', $accessibleCommunityIds)->orderBy('first_name');
-        $members = $query->paginate(10);
-
-        Log::info('Membros carregados:', [
-            'user_id' => $user->id,
-            'accessibleCommunityIds' => $accessibleCommunityIds,
-            'member_count' => $members->total()
-        ]);
+        $members = Member::whereIn('community_id', $communities->pluck('id'))
+            ->with(['community', 'contributions'])
+            ->get();
 
         return view('sec.members.index', [
-            'members' => $members,
-            'communities' => $communities,
+            'members' => $members
         ]);
     }
+
 
 
     /**

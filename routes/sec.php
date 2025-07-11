@@ -16,4 +16,5 @@ Route::middleware(['auth', 'verified', 'access-sec-panel'])->prefix('sec')->grou
     Route::get('/contributions/report/by-community', [ContributionController::class, 'reportByCommunity'])->name('contributions.reportByCommunity');
     Route::post('/contributions/generate-report-by-community', [ContributionController::class, 'generateReportByCommunity'])->name('contributions.generateReportByCommunity');
     Route::get('/members/{member}/pdf', [MemberController::class, 'pdf'])->name('sec.members.pdf');
+    Route::get('/members/data', [MemberController::class, 'data'])->name('sec.members.data');
 });

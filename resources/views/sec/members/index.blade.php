@@ -59,7 +59,7 @@
                         <td>{{ $member->email ?? '-' }}</td>
                         <td class="text-center">
                             <a href="{{ route('sec.members.show', ['member' => $member]) }}" class="btn btn-info btn-sm" title="{{ __('Visualizar') }}">
-                                <i class="fas fa-eye"></i>
+                                <i class="fas fa-edit"></i>
                             </a>
                         </td>
                     </tr>
