@@ -101,6 +101,40 @@ class DashboardController extends Controller
             'data' => $crescimentoMembros->pluck('total')->toArray()
         ];
 
+        $membrosAte10anos = Member::where('community_id', $selectedCommunityId)
+            ->where('birth_date', '>=', Carbon::now()->subYears(10))
+            ->count();
+        $membros11a14anos = Member::where('community_id', $selectedCommunityId)
+            ->where('birth_date', '<', Carbon::now()->subYears(10))
+            ->where('birth_date', '>=', Carbon::now()->subYears(14))
+            ->count();
+        $membros15a29anos = Member::where('community_id', $selectedCommunityId)->where('birth_date', '<', Carbon::now()->subYears(14))
+            ->where('birth_date', '>=', Carbon::now()->subYears(29))
+            ->count();
+        $membros30a59anos = Member::where('community_id', $selectedCommunityId)
+            ->where('birth_date', '<', Carbon::now()->subYears(29))
+            ->where('birth_date', '>=', Carbon::now()->subYears(59))
+            ->count();
+        $membros60a80anos = Member::where('community_id', $selectedCommunityId)
+            ->where('birth_date', '<', Carbon::now()->subYears(59))
+            ->where('birth_date', '>=', Carbon::now()->subYears(80))
+            ->count();
+        $membrosAcima80anos = Member::where('community_id', $selectedCommunityId)
+            ->where('birth_date', '<', Carbon::now()->subYears(80))
+            ->count();
+
+        $membrosPorFaixaEtaria = [
+            'labels' => ['Até 10 anos', '11 a 14 anos', '15 a 29 anos', '30 a 59 anos', '60 a 80 anos', 'Acima de 80 anos'],
+            'data' => [
+                $membrosAte10anos,
+                $membros11a14anos,
+                $membros15a29anos,
+                $membros30a59anos,
+                $membros60a80anos,
+                $membrosAcima80anos
+            ]
+        ];
+
         return view('sec.dashboard', compact(
             'communities',
             'membrosCadastrados',
@@ -110,6 +144,13 @@ class DashboardController extends Controller
             'contribuicoesPorMes',
             'crescimentoMembros',
             'selectedCommunityId',
+            'membrosAte10anos',
+            'membros11a14anos',
+            'membros15a29anos',
+            'membros30a59anos',
+            'membros60a80anos',
+            'membrosAcima80anos',
+            'membrosPorFaixaEtaria', // Adicione esta linha
             'error'
         ));
     }
