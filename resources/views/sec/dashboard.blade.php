@@ -88,14 +88,31 @@
                     datasets: [{
                         label: '{{ __('Contribuições') }}',
                         data: @json($contribuicoesPorMes['data']),
-                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: 'rgba(0, 123, 255, 0.6)',
+                        borderColor: 'rgba(0, 123, 255, 1)',
                         borderWidth: 1
                     }]
                 },
                 options: {
                     scales: {
-                        y: { beginAtZero: true }
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '{{ __('Valor (R$)') }}'
+                            }
+                        }
+                    },
+                    plugins: {
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'top',
+                            formatter: (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                            color: '#000',
+                            font: {
+                                weight: 'bold'
+                            }
+                        }
                     }
                 }
             });
@@ -108,8 +125,22 @@
                     datasets: [{
                         label: '{{ __('Membros') }}',
                         data: @json($membrosPorFaixaEtaria['data']),
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: [
+                            'rgba(255, 65, 105, 0.6)', // Rosa forte
+                            'rgba(0, 150, 200, 0.6)', // Azul forte
+                            'rgba(255, 180, 0, 0.6)', // Amarelo forte
+                            'rgba(0, 180, 120, 0.6)', // Verde forte
+                            'rgba(150, 100, 255, 0.6)', // Roxo forte
+                            'rgba(255, 140, 0, 0.6)' // Laranja forte
+                        ],
+                        borderColor: [
+                            'rgba(255, 65, 105, 1)', // Rosa escuro
+                            'rgba(0, 150, 200, 1)', // Azul escuro
+                            'rgba(255, 180, 0, 1)', // Amarelo escuro
+                            'rgba(0, 180, 120, 1)', // Verde escuro
+                            'rgba(150, 100, 255, 1)', // Roxo escuro
+                            'rgba(255, 140, 0, 1)' // Laranja escuro
+                        ],
                         borderWidth: 1
                     }]
                 },
