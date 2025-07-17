@@ -38,8 +38,8 @@ return new class extends Migration
             $table->string('marital_status')->nullable();
             $table->string('father_name')->nullable();
             $table->string('mother_name')->nullable();
-            $table->string('delivery_method')->default('Postal Mail');
-            $table->string('payment_method')->default('Transferência Bancária');
+            $table->string('delivery_method')->default('correio');
+            $table->string('payment_method')->default('transf_bancaria');
             $table->tinyInteger('due_day')->default(5);
             $table->decimal('amount', 8, 2)->default(0.00);
             $table->longText('observations')->nullable();

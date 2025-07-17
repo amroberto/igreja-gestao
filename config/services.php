@@ -35,7 +35,8 @@ return [
         ],
     ],
     'asaas' => [
-        'key' => env('ASAAS_API_KEY'),
-        'url' => env('ASAAS_API_URL', 'https://sandbox.asaas.com'),
+        'api_key' => env('ASAAS_API_KEY'),
+        'base_url' => env('ASAAS_BASE_URL', 'https://sandbox.asaas.com'),
     ],
+
 ];

@@ -1,6 +1,6 @@
 <?php
 
-use App\Providers\AuthServiceProvider;
+use App\Providers\AppServiceProvider;
 use Illuminate\Foundation\Application;
 use App\Http\Middleware\CheckSecAccess;
 use App\Http\Middleware\CheckAdminAccess;
@@ -22,14 +22,14 @@ return Application::configure(basePath: dirname(__DIR__))
             'access-sec-panel' => CheckSecAccess::class,
             'access-presbiterio-panel' => CheckPresbiterioAccess::class,
             'access-diretoria-panel' => CheckDiretoriaAccess::class,
-            'access-admin-panel' =>CheckAdminAccess::class,
+            'access-admin-panel' => CheckAdminAccess::class,
         ]);
     })
     ->withExceptions(function () {
         //
     })
     ->withProviders([
-        AuthServiceProvider::class,
+        AppServiceProvider::class,
         \Barryvdh\DomPDF\ServiceProvider::class,
     ])
     ->create();

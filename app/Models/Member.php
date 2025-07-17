@@ -103,4 +103,5 @@ class Member extends Model
     {
         return $this->hasMany(CreditCard::class);
     }
+    
 }

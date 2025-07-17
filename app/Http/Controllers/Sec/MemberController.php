@@ -12,7 +12,7 @@ use App\Enums\UserTypeEnum;
 use App\Models\Contribution;
 use Illuminate\Http\Request;
 use App\Models\ParochialUnion;
-use App\Services\AsaasService;
+use App\Services\AsaasCustomerService;
 use App\Enums\MaritalStatusEnum;
 use App\Enums\PaymentMethodEnum;
 use App\Enums\DeliveryMethodEnum;
@@ -68,7 +68,7 @@ class MemberController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request, AsaasService $asaas)
+    public function store(Request $request, AsaasCustomerService $asaas)
     {
         $data = $this->removeMasks($request->all());
         $member = new Member();
