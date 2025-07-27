@@ -22,8 +22,11 @@ return new class extends Migration
             $table->date('start_date'); // Mês/ano inicial
             $table->date('end_date')->nullable(); // Mês/ano final (opcional)
             $table->string('description')->nullable();
-            $table->index('community_id', 'contribution_date');
-            $table->index('financial_entity_id', 'contributiopn_date');
+            $table->text('asaas_boleto_url')->nullable(); // URL do boleto gerado no Asaas
+            $table->text('asaas_payment_id')->nullable(); // ID do pagamento no Asaas
+            $table->boolean('is_paid')->default(false); // Indica se a contribuição foi paga
+            $table->index(['community_id', 'contribution_date'], 'contributions_community_date_index');
+            $table->index(['financial_entity_id', 'contribution_date'], 'contributions_financial_date_index');
             $table->timestamps();
         });
     }

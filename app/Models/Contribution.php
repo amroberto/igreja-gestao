@@ -26,6 +26,9 @@ class Contribution extends Model
         'description',
         'payment_method',
         'status',
+        'asaas_payment_id',
+        'asaas_boleto_url',
+        'is_paid',
     ];
 
     protected $casts = [

@@ -14,8 +14,8 @@ class CreditCard extends Model
         'asaas_card_id',  // id do cartão na API Asaas
         'last_digits',    // últimos 4 dígitos do cartão
         'brand',          // bandeira (Visa, Mastercard, etc)
-        'holder_name',    // nome do titular (opcional)
-        'expiration_date' // validade (opcional)
+        'holder_name',    // nome do titular
+        'expiration_date' // validade
     ];
 
     // Relação com o membro dono do cartão

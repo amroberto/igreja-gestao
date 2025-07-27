@@ -32,6 +32,7 @@
                                 <th>Período</th>
                                 <th>Valor</th>
                                 <th>Status</th>
+                                <th>Ações</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -58,10 +59,17 @@
                                     <span class="badge bg-secondary">{{ $contribution->status ?? 'Desconhecido' }}</span>
                                     @endif
                                 </td>
+                                <td>
+                                @if ($contribution->asaas_boleto_url && $contribution->status->value === 'pending' && $contribution->payment_method->value === 'boleto_bancario')
+                                    <a href="{{ $contribution->asaas_boleto_url }}" class="btn btn-sm btn-danger" target="_blank">
+                                        <i class="bi bi-file-earmark-pdf"></i> Visualizar Boleto
+                                    </a>
+                                @endif
+                                </td>
                             </tr>
                             @endforeach
-                            {{ $contributions->links() }}
                         </tbody>
+                        {{ $contributions->links() }}
                     </table>
                     @endif
                 </div>

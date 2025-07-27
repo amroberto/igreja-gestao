@@ -2,18 +2,31 @@
 
 namespace App\Http\Controllers\Member;
 
-use Carbon\Carbon;
+use App\Models\Member;
 use App\Models\Community;
-use App\Models\CreditCard;
 use App\Models\Contribution;
 use Illuminate\Http\Request;
+use App\Models\FinancialEntity;
+use App\Enums\PaymentMethodEnum;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
-use App\Services\AsaasService;
+use App\Services\Asaas\AsaasPaymentService;
+use App\Services\Asaas\AsaasCustomerService;
+use Illuminate\Validation\ValidationException;
 
 class ContributionController extends Controller
 {
+    protected $asaasPaymentService;
+    protected $asaasCustomerService;
+
+    public function __construct(AsaasPaymentService $asaasPaymentService, AsaasCustomerService $asaasCustomerService)
+    {
+        $this->asaasPaymentService = $asaasPaymentService;
+        $this->asaasCustomerService = $asaasCustomerService;
+    }
+
     public function index()
     {
         try {
@@ -36,105 +49,108 @@ class ContributionController extends Controller
 
     public function create()
     {
-        $communities = Community::where('id', '!=', 1)->get();
         $member = Auth::user()->member;
         if (!$member) {
             Log::warning('Usuário ID: ' . Auth::id() . ' não possui Member associado.');
             return redirect()->route('member.dashboard')->with('error', 'Nenhum perfil de membro encontrado.');
         }
 
-        $creditCards = $member->creditCards()->get();
+        $communities = Community::where('id', '!=', 1)->get();
 
-        return view('member.contributions.create', compact('member', 'communities', 'creditCards'));
+        return view('member.contributions.create', compact('member', 'communities'));
     }
 
     public function store(Request $request)
     {
-        $member = Auth::user()->member;
-
-        $request->validate([
-            'community_id'    => 'required|exists:communities,id',
-            'start_date'      => 'required|date_format:Y-m',
-            'amount'          => 'required|numeric|min:0.01',
-            'payment_method'  => 'required|in:pix,creditcard,boleto_bancario',
-            'description'     => 'nullable|string|max:255',
-            'credit_card_id'  => 'nullable|exists:credit_cards,id',
-        ]);
-
         try {
-            $data = $request->only([
-                'community_id',
-                'start_date',
-                'end_date',
-                'amount',
-                'payment_method',
-                'description',
-                'credit_card_id'
+            // Validação dos dados
+            $validated = $request->validate([
+                'member_id' => 'required|exists:members,id',
+                'community_id' => 'required|exists:communities,id',
+                'contribution_date' => 'required|date',
+                'period_type' => 'required|string',
+                'start_date' => 'required|date',
+                'end_date' => 'nullable|date',
+                'payment_method' => 'required|string|in:BankSlip,Pix,CreditCard',
+                'amount' => 'required|numeric',
+                'description' => 'nullable|string',
             ]);
 
-            $contributionDate = now();
-            $startDate = Carbon::createFromFormat('Y-m', $data['start_date'])->startOfMonth();
-            $endDate = $data['end_date'] ? Carbon::createFromFormat('Y-m', $data['end_date'])->endOfMonth() : null;
+            $member = Member::findOrFail($validated['member_id']);
+            $asaasCustomerService = new AsaasCustomerService();
+            $asaasPaymentService = new AsaasPaymentService();
 
-            $contribution = Contribution::create([
-                'member_id'         => $member->id,
-                'community_id'      => $data['community_id'],
-                'contribution_date' => $contributionDate,
-                'period_type'       => $data['end_date'] ? 'range' : 'monthly',
-                'start_date'        => $startDate->toDateString(),
-                'end_date'          => $endDate?->toDateString(),
-                'amount'            => $data['amount'],
-                'payment_method'    => $data['payment_method'],
-            ]);
-
-            if (empty($member->member_asaas_id)) {
-                throw new \Exception('ID do cliente Asaas não encontrado para o membro.');
+            // Verificar ou criar cliente no Asaas
+            if (!$member->member_asaas_id || !$asaasCustomerService->verifyCustomer($member->member_asaas_id)) {
+                $asaasData = [
+                    'name' => $member->name,
+                    'email' => $member->email,
+                    'cpfCnpj' => $member->cpf,
+                    'postalCode' => $member->cep,
+                    'address' => $member->address,
+                    'addressNumber' => $member->number,
+                    'phone' => $member->phone,
+                    'mobilePhone' => $member->cellphone,
+                    'externalReference' => (string) $member->id,
+                ];
+                $asaasCustomer = $asaasCustomerService->createCustomer($asaasData);
+                $member->member_asaas_id = $asaasCustomer['id'];
+                $member->save();
             }
 
-            $asaasService = new AsaasService();
-            $paymentPayload = [
-                'customer_id'  => $member->member_asaas_id,
-                'amount'       => $contribution->amount,
-                'description'  => $contribution->description ?? 'Contribuição',
-                'id'           => $contribution->id,
+            // Criar cobrança no Asaas
+            $paymentData = [
+                'customer' => $member->member_asaas_id,
+                'value' => $validated['amount'],
+                'description' => $validated['description'],
             ];
+            $dueDate = $validated['contribution_date'];
+            $asaasResponse = $asaasPaymentService->createBoletoCharge($member, $paymentData, $dueDate);
 
-            $responseType = null;
-            $responseData = null;
-
-            switch ($data['payment_method']) {
-                case 'pix':
-                    $responseData = $asaasService->createPixCharge($paymentPayload);
-                    $responseType = 'pix';
-                    break;
-
-                case 'boleto_bancario':
-                    $dueDate = now()->addWeekdays(3)->format('Y-m-d');
-                    $responseData = $asaasService->createBoletoCharge($paymentPayload, $dueDate);
-                    $responseType = 'boleto';
-                    break;
-
-                case 'creditcard':
-                    $card = CreditCard::find($data['credit_card_id']);
-                    if (!$card || $card->member_id != $member->id) {
-                        return back()->withErrors(['credit_card_id' => 'Cartão inválido.'])->withInput();
-                    }
-                    $paymentPayload['creditCardToken'] = $card->token;
-                    $asaasService->payWithCreditCard($paymentPayload, $card);
-                    $responseType = 'creditcard';
-                    break;
-            }
-
-            // Um único return baseado no tipo
-            return match ($responseType) {
-                'pix' => view('member.contributions.pix', ['pix' => $responseData]),
-                'boleto' => redirect()->away($responseData['bankSlipUrl']),
-                'creditcard' => redirect()->route('member.contributions.index')->with('success', 'Pagamento com cartão realizado com sucesso.'),
-                default => redirect()->route('member.contributions.index')->with('success', 'Contribuição registrada com sucesso.'),
+            // Mapear payment_method para o valor do enum
+            $paymentMethod = match ($validated['payment_method']) {
+                'BankSlip' => PaymentMethodEnum::BankSlip->value,
+                'Pix' => PaymentMethodEnum::Pix->value,
+                'CreditCard' => PaymentMethodEnum::CreditCard->value,
+                default => throw new \Exception('Método de pagamento inválido: ' . $validated['payment_method']),
             };
+
+            // Salvar no banco
+            DB::beginTransaction();
+            $payment = Contribution::create([
+                'contribution_date' => $validated['contribution_date'],
+                'start_date' => $validated['start_date'],
+                'end_date' => $validated['end_date'] ?? null,
+                'financial_entity_id' => FinancialEntity::where('name', 'On-line')->first()->id,
+                'member_id' => $validated['member_id'],
+                'community_id' => $validated['community_id'],
+                'payment_method' => $paymentMethod,
+                'amount' => $validated['amount'],
+                'due_date' => $dueDate,
+                'status' => 'pending',
+                'asaas_payment_id' => $asaasResponse['id'],
+                'asaas_boleto_url' => $asaasResponse['bankSlipUrl'],
+                'description' => $validated['description'],
+                'created_at' => now(),
+            ]);
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Contribuição criada com sucesso',
+                'data' => $payment,
+            ]);
         } catch (\Exception $e) {
-            Log::error('Erro ao registrar contribuição: ' . $e->getMessage());
-            return back()->with('error', 'Erro ao registrar contribuição.')->withInput();
+            DB::rollBack();
+            Log::error('Erro ao criar contribuição', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'validated' => $request->all(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao criar contribuição: ' . $e->getMessage(),
+            ], 500);
         }
     }
 }

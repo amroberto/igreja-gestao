@@ -74,7 +74,7 @@
                             <div class="col-md-6 mb-3">
                                 <label for="rg" class="form-label">{{ __('RG') }}</label>
                                 <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-card-id"></i></span>
+                                    <span class="input-group-text"><i class="bi bi-person-vcard-fill"></i></span>
                                     <input id="rg" type="text" name="rg" class="form-control" value="{{ old('rg', $member->rg) }}">
                                 </div>
                                 <x-input-error :messages="$errors->get('rg')" class="text-danger small" />

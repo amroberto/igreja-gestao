@@ -17,8 +17,7 @@ return new class extends Migration
             $table->string('asaas_card_id')->unique();
             $table->string('brand');
             $table->string('last_digits', 4);
-            $table->string('expiration_month');
-            $table->string('expiration_year');
+            $table->string('expiration_date'); // Formato: MM/AA
             $table->timestamps();
         });
     }

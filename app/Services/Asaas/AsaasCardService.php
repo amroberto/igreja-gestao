@@ -1,52 +1,141 @@
 <?php
-
 namespace App\Services\Asaas;
 
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 
 class AsaasCardService
 {
-    protected Client $client;
-    protected array $headers;
+    protected $apiKey;
+    protected $baseUrl;
+    protected $customerService;
 
-    public function __construct(AsaasClient $asaasClient)
+    public function __construct(AsaasCustomerService $customerService)
     {
-        $this->client = $asaasClient->getClient();
-        $this->headers = $asaasClient->getHeaders();
+        $this->apiKey = config('services.asaas.api_key');
+        $this->baseUrl = config('services.asaas.base_url');
+        $this->customerService = $customerService;
     }
 
-    public function storeCard(array $data): array
+    public function createCharge(string $customerId, array $paymentData): array
     {
         try {
-            if (empty($data['customer']) || empty($data['creditCardToken'])) {
-                throw new \Exception('Parâmetros obrigatórios ausentes: customer ou creditCardToken.');
+            if (!$this->customerService->verifyCustomer($customerId)) {
+                Log::error('Customer ID inválido ou não encontrado ao criar cobrança', [
+                    'customer_id' => $customerId,
+                ]);
+                throw new \Exception('Customer ID inválido ou não encontrado');
             }
 
-            $response = $this->client->post('/v3/creditCard/tokenize', [
-                'headers' => $this->headers,
-                'json' => [
-                    'customer' => $data['customer'],
-                    'creditCardToken' => $data['creditCardToken'],
-                ],
-            ]);
-
-            $responseData = json_decode($response->getBody()->getContents(), true);
-
-            if (!isset($responseData['id'])) {
-                throw new \Exception('Falha ao registrar cartão: resposta inválida.');
+            $requiredFields = ['value', 'dueDate', 'description', 'billingType'];
+            $missingFields = array_filter($requiredFields, fn($field) => empty($paymentData[$field]));
+            if (!empty($missingFields)) {
+                Log::error('Campos obrigatórios ausentes ao criar cobrança', [
+                    'customer_id' => $customerId,
+                    'missing_fields' => $missingFields,
+                ]);
+                throw new \Exception('Campos obrigatórios ausentes: ' . implode(', ', $missingFields));
             }
 
-            return $responseData;
-        } catch (RequestException $e) {
-            $errorResponse = $e->hasResponse() ? json_decode($e->getResponse()->getBody()->getContents(), true) : null;
-            Log::error('Erro ao armazenar cartão no Asaas', [
-                'message' => $e->getMessage(),
-                'status' => $e->hasResponse() ? $e->getResponse()->getStatusCode() : 'N/A',
-                'body' => $errorResponse ?? 'Sem corpo na resposta',
+            if (!in_array($paymentData['billingType'], ['BOLETO', 'PIX', 'CREDIT_CARD'])) {
+                Log::error('Tipo de cobrança inválido', [
+                    'customer_id' => $customerId,
+                    'billingType' => $paymentData['billingType'],
+                ]);
+                throw new \Exception('Tipo de cobrança inválido');
+            }
+
+            $requestBody = [
+                'customer' => $customerId,
+                'billingType' => $paymentData['billingType'],
+                'value' => (float) $paymentData['value'],
+                'dueDate' => $paymentData['dueDate'], // Formato: YYYY-MM-DD
+                'description' => $paymentData['description'],
+                'externalReference' => $paymentData['externalReference'] ?? null,
+            ];
+
+            if ($paymentData['billingType'] === 'CREDIT_CARD') {
+                $requiredCardFields = ['holderName', 'number', 'expiryMonth', 'expiryYear', 'ccv'];
+                $missingCardFields = array_filter($requiredCardFields, fn($field) => empty($paymentData['creditCard'][$field]));
+                if (!empty($missingCardFields)) {
+                    Log::error('Campos de cartão obrigatórios ausentes', [
+                        'customer_id' => $customerId,
+                        'missing_fields' => $missingCardFields,
+                    ]);
+                    throw new \Exception('Campos de cartão obrigatórios ausentes: ' . implode(', ', $missingCardFields));
+                }
+
+                $requestBody['creditCard'] = [
+                    'holderName' => $paymentData['creditCard']['holderName'],
+                    'number' => $paymentData['creditCard']['number'],
+                    'expiryMonth' => $paymentData['creditCard']['expiryMonth'],
+                    'expiryYear' => $paymentData['creditCard']['expiryYear'],
+                    'ccv' => $paymentData['creditCard']['ccv'],
+                ];
+
+                $requestBody['creditCardHolderInfo'] = [
+                    'name' => $paymentData['creditCard']['holderInfo']['name'],
+                    'cpfCnpj' => preg_replace('/\D/', '', $paymentData['creditCard']['holderInfo']['cpfCnpj']),
+                    'email' => $paymentData['creditCard']['holderInfo']['email'] ?? null,
+                    'postalCode' => $paymentData['creditCard']['holderInfo']['postalCode'],
+                    'addressNumber' => $paymentData['creditCard']['holderInfo']['addressNumber'],
+                    'addressComplement' => $paymentData['creditCard']['holderInfo']['addressComplement'] ?? null,
+                    'phone' => $paymentData['creditCard']['holderInfo']['phone'],
+                    'mobilePhone' => $paymentData['creditCard']['holderInfo']['mobilePhone'] ?? null,
+                ];
+            }
+
+            Log::info('Enviando requisição para criar cobrança no Asaas', [
+                'customer_id' => $customerId,
+                'url' => "{$this->baseUrl}/api/v3/payments",
+                'request_body' => array_merge($requestBody, [
+                    'creditCard' => isset($requestBody['creditCard']) ? array_merge($requestBody['creditCard'], [
+                        'number' => substr($requestBody['creditCard']['number'], 0, 4) . '****',
+                        'ccv' => '***',
+                    ]) : null,
+                ]),
             ]);
-            throw new \Exception('Falha ao armazenar cartão no Asaas: ' . $e->getMessage());
+
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+                'access_token' => $this->apiKey,
+            ])->post("{$this->baseUrl}/api/v3/payments", $requestBody);
+
+            Log::info('Resposta da API do Asaas (createCharge)', [
+                'customer_id' => $customerId,
+                'status' => $response->status(),
+                'response' => $response->json(),
+                'body' => $response->body(),
+            ]);
+
+            if ($response->failed()) {
+                Log::error('Falha na requisição para Asaas (createCharge)', [
+                    'customer_id' => $customerId,
+                    'status' => $response->status(),
+                    'response' => $response->body(),
+                ]);
+                throw new \Exception('Erro na API do Asaas: ' . $response->body());
+            }
+
+            $data = $response->json();
+
+            Log::info('Cobrança criada com sucesso no Asaas', [
+                'customer_id' => $customerId,
+                'payment_id' => $data['id'],
+                'billing_type' => $paymentData['billingType'],
+                'boleto_url' => $data['bankSlipUrl'] ?? 'N/A',
+                'pix_qr_code' => $data['encodedImage'] ?? 'N/A',
+                'pix_copy_paste' => $data['payload'] ?? 'N/A',
+            ]);
+
+            return $data;
+        } catch (\Exception $e) {
+            Log::error('Erro ao criar cobrança no Asaas', [
+                'customer_id' => $customerId,
+                'error' => $e->getMessage(),
+            ]);
+            throw new \Exception('Erro ao criar cobrança: ' . $e->getMessage());
         }
     }
 }
