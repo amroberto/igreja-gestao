@@ -135,11 +135,19 @@ class ContributionController extends Controller
             ]);
             DB::commit();
 
+            Log::info('Contribuição criada com sucesso', [
+                'contribution_id' => $payment->id,
+                'asaas_payment_id' => $asaasResponse['id'],
+                'member_id' => $member->id,
+                'bankSlipUrl' => $asaasResponse['bankSlipUrl'] ?? 'N/A',
+            ]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Contribuição criada com sucesso',
                 'data' => $payment,
-            ]);
+                'bankSlipUrl' => $asaasResponse['bankSlipUrl'] ?? null,
+            ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Erro ao criar contribuição', [
