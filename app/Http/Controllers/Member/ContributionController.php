@@ -105,7 +105,22 @@ class ContributionController extends Controller
                 'description' => $validated['description'],
             ];
             $dueDate = $validated['contribution_date'];
-            $asaasResponse = $asaasPaymentService->createBoletoCharge($member, $paymentData, $dueDate);
+            
+            // se método de pagamento dor boleto, cria boleto no Asaas
+            if ($validated['payment_method'] === 'BankSlip') {
+                $paymentData['billingType'] = 'BOLETO';
+                $asaasResponse = $asaasPaymentService->createBoletoCharge($member, $paymentData, $dueDate);
+            } elseif ($validated['payment_method'] === 'Pix') {
+                $paymentData['billingType'] = 'PIX';
+                $asaasResponse = $asaasPaymentService->createPixCharge($member, $paymentData, $dueDate);
+            } elseif ($validated['payment_method'] === 'CreditCard') {
+                $paymentData['billingType'] = 'CREDIT_CARD';
+                $asaasResponse = $asaasPaymentService->createCreditCardCharge($member, $paymentData, $dueDate);
+            } else {
+                throw new \Exception('Método de pagamento inválido: ' . $validated['payment_method']);
+            }
+
+            //$asaasResponse = $asaasPaymentService->createBoletoCharge($member, $paymentData, $dueDate);
 
             // Mapear payment_method para o valor do enum
             $paymentMethod = match ($validated['payment_method']) {
@@ -130,6 +145,8 @@ class ContributionController extends Controller
                 'status' => 'pending',
                 'asaas_payment_id' => $asaasResponse['id'],
                 'asaas_boleto_url' => $asaasResponse['bankSlipUrl'],
+                'asaas_pix_code' => $asaasResponse['pixCode'] ?? null,
+                'asaas_pix_qr_code' => $asaasResponse['pixQrCode'] ?? null,
                 'description' => $validated['description'],
                 'created_at' => now(),
             ]);

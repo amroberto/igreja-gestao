@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Sec\MemberController;
 use App\Http\Controllers\Sec\DashboardController;
 use App\Http\Controllers\Sec\ContributionController;
+use App\Http\Controllers\Sec\RevenueOrdinaryOtherController;
 
 Route::middleware(['auth', 'verified', 'access-sec-panel'])->prefix('sec')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('sec.dashboard');
@@ -17,4 +18,5 @@ Route::middleware(['auth', 'verified', 'access-sec-panel'])->prefix('sec')->grou
     Route::post('/contributions/generate-report-by-community', [ContributionController::class, 'generateReportByCommunity'])->name('contributions.generateReportByCommunity');
     Route::get('/members/{member}/pdf', [MemberController::class, 'pdf'])->name('sec.members.pdf');
     Route::get('/members/data', [MemberController::class, 'data'])->name('sec.members.data');
+    Route::resource('/revenue-ordinary-categories',RevenueOrdinaryOtherController::class)->names('sec.revenue-ordinary-categories');
 });

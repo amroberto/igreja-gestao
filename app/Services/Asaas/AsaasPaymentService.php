@@ -91,87 +91,175 @@ class AsaasPaymentService
         }
     }
 
-    /**
-     * Create a Pix charge in Asaas.
-     *
-     * @param Member $member
-     * @param array $payload
-     * @return array
-     * @throws Exception
-     */
-    public function createPixCharge(Member $member, array $payload): array
+    public function createPixCharge(Member $member, array $paymentData, $dueDate): array
     {
-        $payload = array_merge($payload, [
-            'billingType' => 'PIX',
-            'customer' => $member->member_asaas_id,
-        ]);
+        try {
+            $payload = [
+                'customer' => $member->member_asaas_id,
+                'billingType' => 'PIX',
+                'value' => (float) $paymentData['value'],
+                'dueDate' => $dueDate,
+                'description' => $paymentData['description'] ?? null,
+            ];
 
-        Log::info('Enviando requisição para criar cobrança Pix no Asaas', [
-            'data' => array_merge($payload, ['cpfCnpj' => isset($payload['cpfCnpj']) ? substr($payload['cpfCnpj'], 0, 4) . '****' : 'N/A']),
-        ]);
-
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'Accept' => 'application/json',
-            'access_token' => $this->apiKey,
-        ])->post("{$this->baseUrl}/payments", $payload);
-
-        Log::info('Resposta da API do Asaas (create Pix)', [
-            'status' => $response->status(),
-            'response' => $response->json(),
-            'body' => $response->body(),
-        ]);
-
-        if ($response->failed()) {
-            Log::error('Falha na requisição para criar Pix no Asaas', [
-                'status' => $response->status(),
-                'response' => $response->body(),
+            Log::info('Enviando requisição para criar cobrança Pix no Asaas', [
+                'data' => array_merge($payload, ['cpfCnpj' => substr($member->cpf, 0, 4) . '****']),
+                'member_id' => $member->id,
             ]);
-            throw new Exception('Erro na API do Asaas: ' . $response->body());
-        }
 
-        return $response->json();
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+                'access_token' => $this->apiKey,
+            ])->post("{$this->baseUrl}/payments", $payload);
+
+            Log::info('Resposta da API do Asaas (create Pix)', [
+                'status' => $response->status(),
+                'response' => $response->json(),
+                'body' => substr($response->body(), 0, 1000),
+            ]);
+
+            if ($response->failed()) {
+                Log::error('Falha na requisição para criar Pix no Asaas', [
+                    'status' => $response->status(),
+                    'response' => $response->body(),
+                    'member_id' => $member->id,
+                ]);
+                throw new Exception('Erro na API do Asaas: ' . $response->body());
+            }
+
+            $data = $response->json();
+            return [
+                'id' => $data['id'],
+                'pixQrCode' => $data['pixQrCode'] ?? null,
+                'encodedValue' => $data['encodedValue'] ?? null,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Exceção em createPixCharge', [
+                'member_id' => $member->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
     }
 
-    /**
-     * Create a credit card payment in Asaas.
-     *
-     * @param Member $member
-     * @param array $payload
-     * @return array
-     * @throws Exception
-     */
-    public function payWithCreditCard(Member $member, array $payload): array
+    public function createCreditCardCharge(Member $member, array $paymentData, string $dueDate): array
     {
-        $payload = array_merge($payload, [
-            'billingType' => 'CREDIT_CARD',
-            'customer' => $member->member_asaas_id,
-        ]);
+        try {
+            $payload = [
+                'customer' => $member->member_asaas_id,
+                'billingType' => 'CREDIT_CARD',
+                'value' => (float) $paymentData['value'],
+                'dueDate' => $dueDate,
+                'description' => $paymentData['description'] ?? null,
+            ];
 
-        Log::info('Enviando requisição para criar pagamento com cartão de crédito no Asaas', [
-            'data' => array_merge($payload, ['cpfCnpj' => isset($payload['cpfCnpj']) ? substr($payload['cpfCnpj'], 0, 4) . '****' : 'N/A']),
-        ]);
-
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'Accept' => 'application/json',
-            'access_token' => $this->apiKey,
-        ])->post("{$this->baseUrl}/payments", $payload);
-
-        Log::info('Resposta da API do Asaas (create credit card)', [
-            'status' => $response->status(),
-            'response' => $response->json(),
-            'body' => $response->body(),
-        ]);
-
-        if ($response->failed()) {
-            Log::error('Falha na requisição para criar pagamento com cartão de crédito no Asaas', [
-                'status' => $response->status(),
-                'response' => $response->body(),
+            Log::info('Enviando requisição para criar cobrança com cartão de crédito no Asaas', [
+                'data' => array_merge($payload, ['cpfCnpj' => substr($member->cpf, 0, 4) . '****']),
+                'member_id' => $member->id,
             ]);
-            throw new Exception('Erro na API do Asaas: ' . $response->body());
-        }
 
-        return $response->json();
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+                'access_token' => $this->apiKey,
+            ])->post("{$this->baseUrl}/payments", $payload);
+
+            Log::info('Resposta da API do Asaas (create credit card)', [
+                'status' => $response->status(),
+                'response' => $response->json(),
+                'body' => substr($response->body(), 0, 1000),
+            ]);
+
+            if ($response->failed()) {
+                Log::error('Falha na requisição para criar pagamento com cartão de crédito no Asaas', [
+                    'status' => $response->status(),
+                    'response' => $response->body(),
+                    'member_id' => $member->id,
+                ]);
+                throw new Exception('Erro na API do Asaas: ' . $response->body());
+            }
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error('Exceção em createCreditCardCharge', [
+                'member_id' => $member->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
+    }
+
+    public function payWithCreditCard(Member $member, array $paymentData, array $creditCardData): array
+    {
+        try {
+            $payload = [
+                'customer' => $member->member_asaas_id,
+                'billingType' => 'CREDIT_CARD',
+                'value' => (float) $paymentData['value'],
+                'dueDate' => date('Y-m-d'),
+                'description' => $paymentData['description'] ?? null,
+                'creditCard' => [
+                    'holderName' => $creditCardData['holderName'],
+                    'number' => $creditCardData['number'],
+                    'expiryMonth' => sprintf('%02d', $creditCardData['expiryMonth']),
+                    'expiryYear' => $creditCardData['expiryYear'],
+                    'ccv' => $creditCardData['ccv'],
+                ],
+                'creditCardHolderInfo' => $creditCardData['holderInfo'],
+            ];
+
+            Log::info('Enviando requisição para criar pagamento com cartão de crédito no Asaas', [
+                'data' => array_merge($payload, [
+                    'creditCard' => [
+                        'holderName' => $payload['creditCard']['holderName'],
+                        'number' => substr($payload['creditCard']['number'], 0, 4) . '****' . substr($payload['creditCard']['number'], -4),
+                        'expiryMonth' => $payload['creditCard']['expiryMonth'],
+                        'expiryYear' => $payload['creditCard']['expiryYear'],
+                        'ccv' => '***',
+                    ],
+                    'cpfCnpj' => substr($member->cpf, 0, 4) . '****',
+                ]),
+                'member_id' => $member->id,
+            ]);
+
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+                'access_token' => $this->apiKey,
+            ])->post("{$this->baseUrl}/payments", $payload);
+
+            Log::info('Resposta da API do Asaas (create credit card)', [
+                'status' => $response->status(),
+                'response' => $response->json(),
+                'body' => substr($response->body(), 0, 1000),
+            ]);
+
+            if ($response->failed()) {
+                Log::error('Falha na requisição para criar pagamento com cartão de crédito no Asaas', [
+                    'status' => $response->status(),
+                    'response' => $response->body(),
+                    'member_id' => $member->id,
+                ]);
+                throw new Exception('Erro na API do Asaas: ' . $response->body());
+            }
+
+            $data = $response->json();
+            return [
+                'id' => $data['id'],
+                'cardId' => $data['creditCard']['cardId'] ?? null, // Ajustar conforme a API do Asaas
+                'lastDigits' => $data['creditCard']['lastDigits'] ?? substr($creditCardData['number'], -4),
+                'brand' => $data['creditCard']['brand'] ?? 'Unknown',
+            ];
+        } catch (\Exception $e) {
+            Log::error('Exceção em payWithCreditCard', [
+                'member_id' => $member->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
     }
 }

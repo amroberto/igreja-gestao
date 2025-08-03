@@ -28,6 +28,8 @@ class Contribution extends Model
         'status',
         'asaas_payment_id',
         'asaas_boleto_url',
+        'asaas_pix_qr_code',
+        'asaas_pix_payload',
         'is_paid',
     ];
 

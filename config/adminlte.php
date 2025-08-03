@@ -70,12 +70,12 @@ return [
     |
     */
 
-'logo' => '<b>Larachurch</b>',
-'logo_img' => 'images/larachurch.png',
-'logo_img_class' => 'brand-image img-circle elevation-3',
-'logo_img_xl' => null,
-'logo_img_xl_class' => 'brand-image-xs',
-'logo_img_alt' => 'Larachurch Logo',
+    'logo' => '<b>Larachurch</b>',
+    'logo_img' => 'images/larachurch.png',
+    'logo_img_class' => 'brand-image img-circle elevation-3',
+    'logo_img_xl' => null,
+    'logo_img_xl_class' => 'brand-image-xs',
+    'logo_img_alt' => 'Larachurch Logo',
 
     /*
     |--------------------------------------------------------------------------
@@ -396,6 +396,18 @@ return [
                     'icon' => 'fas fa-donate',
                     'can' => 'access-member-panel',
                 ],
+                [
+                    'text' => 'Outras Receitas',
+                    'url'  => 'sec/revenue-ordinary-categories',
+                    'icon' => 'fas fa-money-bill-wave',
+                    'can'  => 'access-admin-panel',
+                ],
+                [
+                    'text' => 'Outras Receitas',
+                    'url'  => 'sec/revenue-ordinary-categories',
+                    'icon' => 'fas fa-money-bill-wave',
+                    'can'  => 'access-sec-panel',
+                ],
 
             ],
         ],
@@ -420,6 +432,7 @@ return [
                             'icon' => 'fas fa-money-bill-wave',
                             'can'  => 'access-sec-panel',
                         ],
+
                     ],
                 ],
             ],
