@@ -11,8 +11,8 @@
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('sec.dashboard') }}">{{ __('Home') }}</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('sec.revenue-categories.index') }}">{{ __('Categoria - Outras Receitas Ordinárias') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">{{ __('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ route('admin.revenue-ordinary-categories.index') }}">{{ __('Categoria - Outras Receitas Ordinárias') }}</a></li>
             <li class="breadcrumb-item active" aria-current="page">{{ __('Cadastrar') }}</li>
         </ol>
     </nav>
@@ -29,9 +29,10 @@
     @endif
 
     <!-- Formulário -->
-    <form action="{{ route('sec.revenue-categories.store') }}" method="POST">
+    <form action="{{ route('admin.revenue-ordinary-categories.update', $category->id) }}" method="POST">
         @csrf
-        <x-adminlte-card title="{{ __('Cadastro de Categoria Outras Receitas Ordinarias') }}" theme="primary" collapsible>
+        @method('PUT')
+        <x-adminlte-card title="{{ __('Cadastro de Outras Receitas Ordinarias') }}" theme="primary" collapsible>
             <!-- Informações Gerais -->
             <div class="card card-primary card-outline">
                 <div class="card-header">
@@ -45,7 +46,7 @@
                                 <span class="input-group-textТекст
 
 System: <i class=" fas fa-university"></i></span>
-                                <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" value="{{ old('name') }}" placeholder="{{ __('Digite o nome da categoria') }}" required>
+                                <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" value="{{ $category->name ?? old('name') }}" placeholder="{{ __('Digite o nome da categoria') }}" required>
                             </div>
                             @error('name')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -58,7 +59,7 @@ System: <i class=" fas fa-university"></i></span>
             <!-- Botões -->
             <div class="mb-3">
                 <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save mr-1"></i> {{ __('Salvar') }}</button>
-                <a href="{{ route('sec.revenue-categories.index') }}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left mr-1"></i> {{ __('Voltar') }}</a>
+                <a href="{{ route('admin.revenue-ordinary-categories.index') }}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left mr-1"></i> {{ __('Voltar') }}</a>
             </div>
         </x-adminlte-card>
     </form>

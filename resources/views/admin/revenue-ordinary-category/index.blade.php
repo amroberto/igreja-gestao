@@ -11,7 +11,7 @@
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('sec.dashboard') }}">{{ __('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">{{ __('Home') }}</a></li>
             <li class="breadcrumb-item active" aria-current="page">{{ __('Categoria - Outras Receitas Ordinárias') }}</li>
         </ol>
     </nav>
@@ -31,7 +31,7 @@
 
         <!-- Botão Adicionar -->
         <div class="mb-3">
-            <a href="{{ route('sec.revenue-ordinary-categories.create') }}" class="btn btn-primary btn-sm">
+            <a href="{{ route('admin.revenue-ordinary-categories.create') }}" class="btn btn-primary btn-sm">
                 <i class="fas fa-plus mr-1"></i> {{ __('Adicionar Categoria') }}
             </a>
         </div>
@@ -51,10 +51,10 @@
                         <td>{{ $category->id }}</td>
                         <td>{{ $category->name }}</td>
                         <td>
-                            <a href="{{ route('sec.revenue-ordinary-categories.edit', ['revenue_ordinary_category' => $category]) }}" class="btn btn-warning btn-sm" title="{{ __('Editar') }}">
+                            <a href="{{ route('admin.revenue-ordinary-categories.edit', ['revenue_ordinary_category' => $category]) }}" class="btn btn-warning btn-sm" title="{{ __('Editar') }}">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            <form action="{{ route('sec.revenue-ordinary-categories.destroy', ['revenue_ordinary_category' => $category]) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('Tem certeza que deseja excluir esta categoria?') }}');">
+                            <form action="{{ route('admin.revenue-ordinary-categories.destroy', ['revenue_ordinary_category' => $category]) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('Tem certeza que deseja excluir esta categoria?') }}');">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-danger btn-sm" title="{{ __('Excluir') }}">

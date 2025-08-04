@@ -397,18 +397,11 @@ return [
                     'can' => 'access-member-panel',
                 ],
                 [
-                    'text' => 'Outras Receitas',
-                    'url'  => 'sec/revenue-ordinary-categories',
+                    'text' => 'Outras Receitas Ordinárias',
+                    'url'  => 'admin/revenue-ordinary-categories',
                     'icon' => 'fas fa-money-bill-wave',
                     'can'  => 'access-admin-panel',
                 ],
-                [
-                    'text' => 'Outras Receitas',
-                    'url'  => 'sec/revenue-ordinary-categories',
-                    'icon' => 'fas fa-money-bill-wave',
-                    'can'  => 'access-sec-panel',
-                ],
-
             ],
         ],
         [

@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ContributionController;
 use App\Http\Controllers\Admin\ParochialUnionController;
 use App\Http\Controllers\Admin\FinancialEntityController;
+use App\Http\Controllers\Admin\RevenueOrdinaryOtherController;
 
 Route::middleware(['auth', 'verified', 'access-admin-panel'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
@@ -20,6 +21,7 @@ Route::middleware(['auth', 'verified', 'access-admin-panel'])->prefix('admin')->
     Route::resource('contributions', ContributionController::class)->names('admin.contributions');
     Route::get('/admin/members/autocomplete', [MemberController::class, 'autocomplete'])->name('admin.members.autocomplete');
     Route::get('/members/{member}/pdf', [MemberController::class, 'pdf'])->name('admin.members.pdf');
+    Route::resource('/revenue-ordinary-categories',RevenueOrdinaryOtherController::class)->names('admin.revenue-ordinary-categories');
 
     // Rotas para edição da união paroquial
     Route::get('/parochial-union/edit', [ParochialUnionController::class, 'edit'])->name('admin.parochial-union.edit');
