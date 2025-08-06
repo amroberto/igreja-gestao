@@ -85,15 +85,15 @@
                             <h5 class="mb-3">Tipo de Cobrança</h5>
                             <div class="col-md-12">
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="payment_method" id="boleto" value="BankSlip" {{ old('payment_method', 'BankSlip') == 'BankSlip' ? 'checked' : '' }}>
+                                    <input class="form-check-input" type="radio" name="payment_method" id="boleto" value="boleto_bancario" {{ old('payment_method', 'boleto_bancario') == 'boleto_bancario' ? 'checked' : '' }}>
                                     <label class="form-check-label" for="boleto">Boleto</label>
                                 </div>
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="payment_method" id="pix" value="Pix" {{ old('payment_method') == 'Pix' ? 'checked' : '' }}>
+                                    <input class="form-check-input" type="radio" name="payment_method" id="pix" value="pix" {{ old('payment_method') == 'pix' ? 'checked' : '' }}>
                                     <label class="form-check-label" for="pix">Pix</label>
                                 </div>
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="payment_method" id="credit_card" value="CreditCard" {{ old('payment_method') == 'CreditCard' ? 'checked' : '' }}>
+                                    <input class="form-check-input" type="radio" name="payment_method" id="credit_card" value="creditcard" {{ old('payment_method') == 'creditcard' ? 'checked' : '' }}>
                                     <label class="form-check-label" for="credit_card">Cartão de Crédito</label>
                                 </div>
                             </div>
@@ -118,27 +118,27 @@
                             <h5 class="mb-3">Detalhes do Cartão</h5>
                             <div class="col-md-6 mb-3">
                                 <label for="creditCard_number" class="form-label">Número do Cartão</label>
-                                <input type="text" id="creditCard_number" name="creditCard[number]" class="form-control" placeholder="1234 5678 9012 3456">
+                                <input type="text" id="creditCard_number" name="creditCard[number]" class="form-control" placeholder="1234 5678 9012 3456" disabled>
                                 <div id="card-number-error" class="text-danger small contribution-hidden"></div>
                             </div>
                             <div class="col-md-3 mb-3">
                                 <label for="creditCard_expiryMonth" class="form-label">Mês de Validade</label>
-                                <input type="text" id="creditCard_expiryMonth" name="creditCard[expiryMonth]" class="form-control" placeholder="MM">
+                                <input type="text" id="creditCard_expiryMonth" name="creditCard[expiryMonth]" class="form-control" placeholder="MM" disabled>
                                 <div id="card-expiry-month-error" class="text-danger small contribution-hidden"></div>
                             </div>
                             <div class="col-md-3 mb-3">
                                 <label for="creditCard_expiryYear" class="form-label">Ano de Validade</label>
-                                <input type="text" id="creditCard_expiryYear" name="creditCard[expiryYear]" class="form-control" placeholder="AAAA">
+                                <input type="text" id="creditCard_expiryYear" name="creditCard[expiryYear]" class="form-control" placeholder="AAAA" disabled>
                                 <div id="card-expiry-year-error" class="text-danger small contribution-hidden"></div>
                             </div>
                             <div class="col-md-3 mb-3">
                                 <label for="creditCard_ccv" class="form-label">CVC</label>
-                                <input type="text" id="creditCard_ccv" name="creditCard[ccv]" class="form-control" placeholder="123">
+                                <input type="text" id="creditCard_ccv" name="creditCard[ccv]" class="form-control" placeholder="123" disabled>
                                 <div id="card-cvc-error" class="text-danger small contribution-hidden"></div>
                             </div>
                             <div class="col-md-9 mb-3">
                                 <label for="creditCard_holderName" class="form-label">Nome no Cartão</label>
-                                <input type="text" id="creditCard_holderName" name="creditCard[holderName]" class="form-control" value="{{ $member->name }}">
+                                <input type="text" id="creditCard_holderName" name="creditCard[holderName]" class="form-control" value="{{ $member->name }}" disabled>
                                 <div id="card-holder-name-error" class="text-danger small contribution-hidden"></div>
                             </div>
                             <!-- Campos ocultos para holderInfo -->
@@ -182,16 +182,29 @@
         // Alternar campos de cartão de crédito
         const paymentMethodInputs = document.querySelectorAll('input[name="payment_method"]');
         const creditCardFields = document.getElementById('credit-card-fields');
+        const creditCardInputs = [
+            document.getElementById('creditCard_number'),
+            document.getElementById('creditCard_expiryMonth'),
+            document.getElementById('creditCard_expiryYear'),
+            document.getElementById('creditCard_ccv'),
+            document.getElementById('creditCard_holderName'),
+        ];
         paymentMethodInputs.forEach(input => {
             input.addEventListener('change', function () {
-                creditCardFields.classList.toggle('contribution-hidden', this.value !== 'CREDIT_CARD');
-                if (this.value !== 'CREDIT_CARD') {
-                    document.getElementById('creditCard_number').value = '';
-                    document.getElementById('creditCard_expiryMonth').value = '';
-                    document.getElementById('creditCard_expiryYear').value = '';
-                    document.getElementById('creditCard_ccv').value = '';
-                    document.getElementById('creditCard_holderName').value = '{{ $member->name }}';
-                }
+                const isCreditCard = this.value === 'creditcard';
+                creditCardFields.classList.toggle('contribution-hidden', !isCreditCard);
+                creditCardInputs.forEach(input => {
+                    input.disabled = !isCreditCard;
+                    if (!isCreditCard) {
+                        input.value = input.id === 'creditCard_holderName' ? '{{ $member->name }}' : '';
+                    }
+                });
+                // Limpar mensagens de erro
+                document.getElementById('card-number-error').classList.add('contribution-hidden');
+                document.getElementById('card-expiry-month-error').classList.add('contribution-hidden');
+                document.getElementById('card-expiry-year-error').classList.add('contribution-hidden');
+                document.getElementById('card-cvc-error').classList.add('contribution-hidden');
+                document.getElementById('card-holder-name-error').classList.add('contribution-hidden');
             });
         });
 
@@ -203,6 +216,7 @@
                 endDateField.classList.toggle('contribution-hidden', this.value === 'current_month');
                 if (this.value === 'current_month') {
                     document.getElementById('end_date').value = '';
+                    document.getElementById('end-date-error').classList.add('contribution-hidden');
                 }
             });
         });
@@ -336,9 +350,9 @@
                 communityError.classList.add('contribution-hidden');
             }
 
-            // Validar campos de cartão de crédito (se selecionado)
+            // Validar campos de cartão de crédito (apenas se payment_method for creditcard)
             const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
-            if (paymentMethod === 'CREDIT_CARD') {
+            if (paymentMethod === 'creditcard') {
                 if (!/^\d{13,19}$/.test(cardNumberInput.value.replace(/\s/g, ''))) {
                     cardNumberInput.classList.add('border-red-500');
                     cardNumberInput.classList.remove('border-green-500');
@@ -351,7 +365,8 @@
                     cardNumberError.classList.add('contribution-hidden');
                 }
 
-                if (!/^(0?[1-9]|1[0-2])$/.test(cardExpiryMonthInput.value)) {
+                const expiryMonth = parseInt(cardExpiryMonthInput.value, 10);
+                if (isNaN(expiryMonth) || expiryMonth < 1 || expiryMonth > 12) {
                     cardExpiryMonthInput.classList.add('border-red-500');
                     cardExpiryMonthInput.classList.remove('border-green-500');
                     cardExpiryMonthError.classList.remove('contribution-hidden');
@@ -363,11 +378,12 @@
                     cardExpiryMonthError.classList.add('contribution-hidden');
                 }
 
-                if (!/^\d{4}$/.test(cardExpiryYearInput.value) || cardExpiryYearInput.value < {{ date('Y') }}) {
+                const expiryYear = parseInt(cardExpiryYearInput.value, 10);
+                if (isNaN(expiryYear) || expiryYear < {{ date('Y') }} || expiryYear > 2099) {
                     cardExpiryYearInput.classList.add('border-red-500');
                     cardExpiryYearInput.classList.remove('border-green-500');
                     cardExpiryYearError.classList.remove('contribution-hidden');
-                    cardExpiryYearError.textContent = 'Ano de validade inválido.';
+                    cardExpiryYearError.textContent = 'Ano de validade inválido ({{ date('Y') }}-2099).';
                     isValid = false;
                 } else {
                     cardExpiryYearInput.classList.remove('border-red-500');
@@ -398,6 +414,18 @@
                     cardHolderNameInput.classList.add('border-green-500');
                     cardHolderNameError.classList.add('contribution-hidden');
                 }
+            } else {
+                // Limpar validações do cartão se não for creditcard
+                cardNumberInput.classList.remove('border-red-500', 'border-green-500');
+                cardExpiryMonthInput.classList.remove('border-red-500', 'border-green-500');
+                cardExpiryYearInput.classList.remove('border-red-500', 'border-green-500');
+                cardCvcInput.classList.remove('border-red-500', 'border-green-500');
+                cardHolderNameInput.classList.remove('border-red-500', 'border-green-500');
+                cardNumberError.classList.add('contribution-hidden');
+                cardExpiryMonthError.classList.add('contribution-hidden');
+                cardExpiryYearError.classList.add('contribution-hidden');
+                cardCvcError.classList.add('contribution-hidden');
+                cardHolderNameError.classList.add('contribution-hidden');
             }
 
             return isValid;
@@ -425,6 +453,23 @@
             const endDateValue = formData.get('end_date');
             if (endDateValue) {
                 formData.set('end_date', `${endDateValue}-01`);
+            }
+
+            // Remover campos de cartão de crédito se payment_method não for creditcard
+            const paymentMethod = formData.get('payment_method');
+            if (paymentMethod !== 'creditcard') {
+                formData.delete('creditCard[number]');
+                formData.delete('creditCard[expiryMonth]');
+                formData.delete('creditCard[expiryYear]');
+                formData.delete('creditCard[ccv]');
+                formData.delete('creditCard[holderName]');
+                formData.delete('creditCard[holderInfo][name]');
+                formData.delete('creditCard[holderInfo][email]');
+                formData.delete('creditCard[holderInfo][cpfCnpj]');
+                formData.delete('creditCard[holderInfo][postalCode]');
+                formData.delete('creditCard[holderInfo][addressNumber]');
+                formData.delete('creditCard[holderInfo][phone]');
+                formData.delete('creditCard[holderInfo][mobilePhone]');
             }
 
             // Log dos dados enviados para depuração
@@ -462,27 +507,30 @@
                 // Abrir boleto ou QR Code do PIX
                 if (data.bankSlipUrl) {
                     window.open(data.bankSlipUrl, '_blank');
-                } else if (data.pixQrCode) {
-                    const pixWindow = window.open('', '_blank');
+                } else if (data.pixQrCode || data.qrCode) {
+                    const pixWindow = window.open('', '_blank', 'width=400,height=600');
                     pixWindow.document.write(`
                         <html>
                             <head>
                                 <title>QR Code PIX</title>
                                 <style>
-                                    body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f0f0f0; }
-                                    img { max-width: 100%; max-height: 100%; }
-                                    .container { text-align: center; }
-                                    .copy-paste { margin-top: 10px; padding: 10px; background: #fff; border: 1px solid #ccc; }
+                                    body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f0f0f0; font-family: Arial, sans-serif; }
+                                    .container { text-align: center; padding: 20px; }
+                                    img { max-width: 300px; max-height: 300px; margin-bottom: 20px; }
+                                    .copy-paste { margin-top: 10px; padding: 10px; background: #fff; border: 1px solid #ccc; border-radius: 5px; }
+                                    .copy-paste input { width: 100%; padding: 8px; margin-bottom: 10px; font-size: 14px; }
+                                    .copy-paste button { padding: 8px 16px; background: #007bff; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
+                                    .copy-paste button:hover { background: #0056b3; }
                                 </style>
                             </head>
                             <body>
                                 <div class="container">
                                     <h3>Pagamento via PIX</h3>
-                                    <img src="data:image/png;base64,${data.pixQrCode}" alt="QR Code PIX">
+                                    <img src="data:image/png;base64,${data.pixQrCode || data.qrCode}" alt="QR Code PIX">
                                     <div class="copy-paste">
                                         <p><strong>Código PIX (Copia e Cola):</strong></p>
-                                        <input type="text" value="${data.pixPayload || ''}" readonly style="width: 100%; padding: 5px;">
-                                        <button onclick="navigator.clipboard.writeText(this.previousElementSibling.value)">Copiar</button>
+                                        <input type="text" value="${data.pixPayload || ''}" readonly>
+                                        <button onclick="navigator.clipboard.writeText(this.previousElementSibling.value).then(() => alert('Código copiado!'))">Copiar</button>
                                     </div>
                                 </div>
                             </body>

@@ -60,75 +60,94 @@ class ContributionController extends Controller
         return view('member.contributions.create', compact('member', 'communities'));
     }
 
-    public function store(Request $request)
+public function store(Request $request)
     {
         try {
             // Validação dos dados
             $validated = $request->validate([
                 'member_id' => 'required|exists:members,id',
                 'community_id' => 'required|exists:communities,id',
-                'contribution_date' => 'required|date',
-                'period_type' => 'required|string',
+                'contribution_date' => 'required|date|after_or_equal:today',
+                'period_type' => 'required|in:current_month,period',
                 'start_date' => 'required|date',
-                'end_date' => 'nullable|date',
-                'payment_method' => 'required|string|in:BankSlip,Pix,CreditCard',
-                'amount' => 'required|numeric',
-                'description' => 'nullable|string',
+                'end_date' => 'nullable|date|after_or_equal:start_date',
+                'payment_method' => 'required|in:boleto_bancario,pix,creditcard',
+                'amount' => 'required|numeric|min:0.01',
+                'description' => 'nullable|string|max:255',
+                'creditCard.number' => 'nullable|required_if:payment_method,creditcard|regex:/^\d{13,19}$/',
+                'creditCard.expiryMonth' => 'nullable|required_if:payment_method,creditcard|integer|between:1,12',
+                'creditCard.expiryYear' => 'nullable|required_if:payment_method,creditcard|integer|between:' . date('Y') . ',2099',
+                'creditCard.ccv' => 'nullable|required_if:payment_method,creditcard|regex:/^\d{3,4}$/',
+                'creditCard.holderName' => 'nullable|required_if:payment_method,creditcard|string|max:255',
+                'creditCard.holderInfo.name' => 'nullable|required_if:payment_method,creditcard|string|max:255',
+                'creditCard.holderInfo.email' => 'nullable|required_if:payment_method,creditcard|email',
+                'creditCard.holderInfo.cpfCnpj' => 'nullable|required_if:payment_method,creditcard|string',
+                'creditCard.holderInfo.postalCode' => 'nullable|required_if:payment_method,creditcard|string',
+                'creditCard.holderInfo.addressNumber' => 'nullable|required_if:payment_method,creditcard|string',
+                'creditCard.holderInfo.phone' => 'nullable|required_if:payment_method,creditcard|string',
+                'creditCard.holderInfo.mobilePhone' => 'nullable|required_if:payment_method,creditcard|string',
             ]);
 
             $member = Member::findOrFail($validated['member_id']);
-            $asaasCustomerService = new AsaasCustomerService();
-            $asaasPaymentService = new AsaasPaymentService();
 
-            // Verificar ou criar cliente no Asaas
-            if (!$member->member_asaas_id || !$asaasCustomerService->verifyCustomer($member->member_asaas_id)) {
-                $asaasData = [
-                    'name' => $member->name,
-                    'email' => $member->email,
-                    'cpfCnpj' => $member->cpf,
-                    'postalCode' => $member->cep,
-                    'address' => $member->address,
-                    'addressNumber' => $member->number,
-                    'phone' => $member->phone,
-                    'mobilePhone' => $member->cellphone,
-                    'externalReference' => (string) $member->id,
-                ];
-                $asaasCustomer = $asaasCustomerService->createCustomer($asaasData);
-                $member->member_asaas_id = $asaasCustomer['id'];
-                $member->save();
+            // Verificar se member_asaas_id existe
+            if (!$member->member_asaas_id) {
+                throw new \Exception('ID do cliente Asaas não encontrado para o membro.');
             }
 
             // Criar cobrança no Asaas
             $paymentData = [
                 'customer' => $member->member_asaas_id,
-                'value' => $validated['amount'],
-                'description' => $validated['description'],
+                'value' => (float) $validated['amount'],
+                'description' => $validated['description'] ?? 'Contribuição de ' . $member->name,
             ];
             $dueDate = $validated['contribution_date'];
-            
-            // se método de pagamento dor boleto, cria boleto no Asaas
-            if ($validated['payment_method'] === 'BankSlip') {
+
+            // Selecionar método de pagamento
+            $asaasResponse = null;
+            if ($validated['payment_method'] === 'boleto_bancario') {
                 $paymentData['billingType'] = 'BOLETO';
-                $asaasResponse = $asaasPaymentService->createBoletoCharge($member, $paymentData, $dueDate);
-            } elseif ($validated['payment_method'] === 'Pix') {
+                $asaasResponse = $this->asaasPaymentService->createBoletoCharge($member, $paymentData, $dueDate);
+            } elseif ($validated['payment_method'] === 'pix') {
                 $paymentData['billingType'] = 'PIX';
-                $asaasResponse = $asaasPaymentService->createPixCharge($member, $paymentData, $dueDate);
-            } elseif ($validated['payment_method'] === 'CreditCard') {
+                $asaasResponse = $this->asaasPaymentService->createPixCharge($member, $paymentData, $dueDate);
+                // Log detalhado da resposta bruta
+                Log::debug('Resposta completa do Asaas para cobrança PIX', [
+                    'asaas_response' => $asaasResponse,
+                    'pixQrCode' => $asaasResponse['pixQrCode'] ?? $asaasResponse['qrCode'] ?? $asaasResponse['pix']['qrCode'] ?? 'N/A',
+                    'encodedValue' => $asaasResponse['encodedValue'] ?? $asaasResponse['payload'] ?? $asaasResponse['pix']['payload'] ?? 'N/A',
+                ]);
+            } elseif ($validated['payment_method'] === 'creditcard') {
                 $paymentData['billingType'] = 'CREDIT_CARD';
-                $asaasResponse = $asaasPaymentService->createCreditCardCharge($member, $paymentData, $dueDate);
+                $creditCardData = [
+                    'holderName' => $validated['creditCard']['holderName'],
+                    'number' => $validated['creditCard']['number'],
+                    'expiryMonth' => sprintf('%02d', $validated['creditCard']['expiryMonth']),
+                    'expiryYear' => $validated['creditCard']['expiryYear'],
+                    'ccv' => $validated['creditCard']['ccv'],
+                    'holderInfo' => $validated['creditCard']['holderInfo'],
+                ];
+                $asaasResponse = $this->asaasPaymentService->payWithCreditCard($member, $paymentData, $creditCardData);
             } else {
                 throw new \Exception('Método de pagamento inválido: ' . $validated['payment_method']);
             }
 
-            //$asaasResponse = $asaasPaymentService->createBoletoCharge($member, $paymentData, $dueDate);
-
             // Mapear payment_method para o valor do enum
             $paymentMethod = match ($validated['payment_method']) {
-                'BankSlip' => PaymentMethodEnum::BankSlip->value,
-                'Pix' => PaymentMethodEnum::Pix->value,
-                'CreditCard' => PaymentMethodEnum::CreditCard->value,
+                'boleto_bancario' => PaymentMethodEnum::BankSlip->value,
+                'pix' => PaymentMethodEnum::Pix->value,
+                'creditcard' => PaymentMethodEnum::CreditCard->value,
                 default => throw new \Exception('Método de pagamento inválido: ' . $validated['payment_method']),
             };
+
+            // Log dos dados antes de salvar no banco
+            Log::debug('Preparando para salvar contribuição no banco', [
+                'member_id' => $member->id,
+                'asaas_response' => $asaasResponse,
+                'payment_method' => $paymentMethod,
+                'asaas_pix_qr_code' => $asaasResponse['pixQrCode'] ?? $asaasResponse['qrCode'] ?? $asaasResponse['pix']['qrCode'] ?? null,
+                'asaas_pix_payload' => $asaasResponse['encodedValue'] ?? $asaasResponse['payload'] ?? $asaasResponse['pix']['payload'] ?? null,
+            ]);
 
             // Salvar no banco
             DB::beginTransaction();
@@ -143,34 +162,49 @@ class ContributionController extends Controller
                 'amount' => $validated['amount'],
                 'due_date' => $dueDate,
                 'status' => 'pending',
-                'asaas_payment_id' => $asaasResponse['id'],
-                'asaas_boleto_url' => $asaasResponse['bankSlipUrl'],
-                'asaas_pix_code' => $asaasResponse['pixCode'] ?? null,
-                'asaas_pix_qr_code' => $asaasResponse['pixQrCode'] ?? null,
+                'asaas_payment_id' => $asaasResponse['id'] ?? null,
+                'asaas_boleto_url' => $asaasResponse['bankSlipUrl'] ?? null,
+                'asaas_pix_qr_code' => $asaasResponse['pixQrCode'] ?? $asaasResponse['qrCode'] ?? $asaasResponse['pix']['qrCode'] ?? null,
+                'asaas_pix_payload' => $asaasResponse['encodedValue'] ?? $asaasResponse['payload'] ?? $asaasResponse['pix']['payload'] ?? null,
                 'description' => $validated['description'],
                 'created_at' => now(),
+                'is_paid' => false,
             ]);
             DB::commit();
 
             Log::info('Contribuição criada com sucesso', [
                 'contribution_id' => $payment->id,
-                'asaas_payment_id' => $asaasResponse['id'],
+                'asaas_payment_id' => $asaasResponse['id'] ?? 'N/A',
                 'member_id' => $member->id,
                 'bankSlipUrl' => $asaasResponse['bankSlipUrl'] ?? 'N/A',
+                'pixQrCode' => $asaasResponse['pixQrCode'] ?? $asaasResponse['qrCode'] ?? $asaasResponse['pix']['qrCode'] ?? 'N/A',
+                'pixPayload' => $asaasResponse['encodedValue'] ?? $asaasResponse['payload'] ?? $asaasResponse['pix']['payload'] ?? 'N/A',
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Contribuição criada com sucesso',
-                'data' => $payment,
                 'bankSlipUrl' => $asaasResponse['bankSlipUrl'] ?? null,
+                'pixQrCode' => $asaasResponse['pixQrCode'] ?? $asaasResponse['qrCode'] ?? $asaasResponse['pix']['qrCode'] ?? null,
+                'pixPayload' => $asaasResponse['encodedValue'] ?? $asaasResponse['payload'] ?? $asaasResponse['pix']['payload'] ?? null,
             ], 201);
+        } catch (ValidationException $e) {
+            Log::error('Erro de validação ao criar contribuição', [
+                'errors' => $e->errors(),
+                'validated' => $request->all(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro de validação',
+                'errors' => $e->errors(),
+            ], 422);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Erro ao criar contribuição', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'validated' => $request->all(),
+                'asaas_response' => isset($asaasResponse) ? $asaasResponse : 'N/A',
             ]);
             return response()->json([
                 'success' => false,
