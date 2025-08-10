@@ -4,17 +4,17 @@ namespace App\Http\Controllers\Admin;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Models\RevenueOrdinaryOther;
+use App\Models\RevenueOrdinaryCategory;
 
-class RevenueOrdinaryOtherController extends Controller
+class RevenueOrdinaryCategoryController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        $categories = RevenueOrdinaryOther::all();
-        return view('admin.revenue-ordinary-category.index', compact('categories'));
+        $categories = RevenueOrdinaryCategory::all();
+        return view('admin.revenue-ordinary-categories.index', compact('categories'));
     }
 
     /**
@@ -22,7 +22,7 @@ class RevenueOrdinaryOtherController extends Controller
      */
     public function create()
     {
-        return view('admin.revenue-ordinary-category.create');
+        return view('admin.revenue-ordinary-categories.create');
     }
 
     /**
@@ -34,7 +34,7 @@ class RevenueOrdinaryOtherController extends Controller
             'name' => 'required|string|max:255',
         ]);
 
-        RevenueOrdinaryOther::create($request->all());
+        RevenueOrdinaryCategory::create($request->all());
 
         return redirect()->route('admin.revenue-ordinary-categories.index')
                          ->with('success', 'Outra Categoria de Receita Ordinária criada com sucesso.');
@@ -53,14 +53,14 @@ class RevenueOrdinaryOtherController extends Controller
      */
     public function edit(string $id)
     {
-        $category = RevenueOrdinaryOther::findOrFail($id);
-        return view('admin.revenue-ordinary-category.edit', compact('category'));
+        $category = RevenueOrdinaryCategory::findOrFail($id);
+        return view('admin.revenue-ordinary-categories.edit', compact('category'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, RevenueOrdinaryOther $category)
+    public function update(Request $request, RevenueOrdinaryCategory $category)
     {
         $request->validate([
             'name' => 'required|string|max:255',
@@ -76,7 +76,7 @@ class RevenueOrdinaryOtherController extends Controller
      */
     public function destroy(string $id)
     {
-        $category = RevenueOrdinaryOther::findOrFail($id);
+        $category = RevenueOrdinaryCategory::findOrFail($id);
         $category->delete();
 
         return redirect()->route('admin.revenue-ordinary-categories.index')

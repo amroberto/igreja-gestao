@@ -52,21 +52,18 @@ class DashboardController extends Controller
             ->where('is_contributor', true)
             ->count();
 
-        $contribuicoesMes = Contribution::join('members', 'contributions.member_id', '=', 'members.id')
-            ->where('members.community_id', $selectedCommunityId)
+        $contribuicoesMes = Contribution::where('contributions.community_id', $selectedCommunityId)
             ->where('contributions.status', 'confirmed')
             ->whereMonth('contributions.contribution_date', Carbon::now()->month)
             ->whereYear('contributions.contribution_date', Carbon::now()->year)
             ->sum('contributions.amount');
 
-        $contribuicoesAno = Contribution::join('members', 'contributions.member_id', '=', 'members.id')
-            ->where('members.community_id', $selectedCommunityId)
+        $contribuicoesAno = Contribution::where('contributions.community_id', $selectedCommunityId)
             ->where('contributions.status', 'confirmed')
             ->whereYear('contributions.contribution_date', Carbon::now()->year)
             ->sum('contributions.amount');
 
-        $contribuicoesPorMes = Contribution::join('members', 'contributions.member_id', '=', 'members.id')
-            ->where('members.community_id', $selectedCommunityId)
+        $contribuicoesPorMes = Contribution::where('contributions.community_id', $selectedCommunityId)
             ->where('contributions.status', 'confirmed')
             ->whereYear('contributions.contribution_date', Carbon::now()->year)
             ->selectRaw('MONTH(contributions.contribution_date) as mes, SUM(contributions.amount) as total')

@@ -302,4 +302,71 @@ class AsaasPaymentService
             throw $e;
         }
     }
+
+    public function tokenizeCreditCard(Member $member, array $creditCardData): array
+    {
+        try {
+            $payload = [
+                'customer' => $member->member_asaas_id,
+                'creditCard' => [
+                    'holderName' => $creditCardData['holderName'],
+                    'number' => $creditCardData['number'],
+                    'expiryMonth' => sprintf('%02d', $creditCardData['expiryMonth']),
+                    'expiryYear' => $creditCardData['expiryYear'],
+                    'ccv' => $creditCardData['ccv'],
+                ],
+                'creditCardHolderInfo' => $creditCardData['holderInfo'],
+            ];
+
+            Log::info('Enviando requisição para tokenizar cartão no Asaas', [
+                'data' => array_merge($payload, [
+                    'creditCard' => [
+                        'holderName' => $payload['creditCard']['holderName'],
+                        'number' => substr($payload['creditCard']['number'], 0, 4) . '****' . substr($payload['creditCard']['number'], -4),
+                        'expiryMonth' => $payload['creditCard']['expiryMonth'],
+                        'expiryYear' => $payload['creditCard']['expiryYear'],
+                        'ccv' => '***',
+                    ],
+                    'cpfCnpj' => substr($member->cpf, 0, 4) . '****',
+                ]),
+                'member_id' => $member->id,
+            ]);
+
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+                'access_token' => $this->apiKey,
+            ])->post("{$this->baseUrl}/creditCard/tokenize", $payload);
+
+            Log::info('Resposta da API do Asaas (tokenize credit card)', [
+                'status' => $response->status(),
+                'response' => $response->json(),
+                'body' => substr($response->body(), 0, 1000),
+            ]);
+
+            if ($response->failed()) {
+                Log::error('Falha na requisição para tokenizar cartão no Asaas', [
+                    'status' => $response->status(),
+                    'response' => $response->body(),
+                    'member_id' => $member->id,
+                ]);
+                throw new Exception('Erro na API do Asaas: ' . ($response->json()['errors'][0]['description'] ?? 'Erro desconhecido'));
+            }
+
+            $data = $response->json();
+            return [
+                'cardId' => $data['creditCardToken'],
+                'lastDigits' => $data['lastDigits'] ?? substr($creditCardData['number'], -4),
+                'brand' => $data['brand'] ?? 'Unknown',
+                'expirationDate' => sprintf('%02d/%s', $creditCardData['expiryMonth'], substr($creditCardData['expiryYear'], -2)),
+            ];
+        } catch (\Exception $e) {
+            Log::error('Exceção em tokenizeCreditCard', [
+                'member_id' => $member->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
+    }
 }

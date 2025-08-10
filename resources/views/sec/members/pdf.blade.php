@@ -147,7 +147,7 @@
     <!-- Cabeçalho (apenas na primeira página) -->
     <div class="header">
         @if($parochialUnion->logo)
-        <img src="{{ public_path('storage/' . $parochialUnion->logo) }}" alt="Logo {{ $parochialUnion->trade_name }}" style="max-height: 50px; margin-bottom: 8px;">
+            <img src="{{ public_path('storage/' . $parochialUnion->logo) }}" alt="Logo {{ $parochialUnion->trade_name }}" style="max-height: 50px; margin-bottom: 8px;">
         @endif
         <h2 style="font-size: 14pt; margin: 5px 0;">{{ $parochialUnion->trade_name ?? 'União Paroquial' }}</h2>
         <p style="font-size: 9pt; margin: 0;">{{ $parochialUnion->corporate_name ?? 'Nome corporativo não informado' }}</p>

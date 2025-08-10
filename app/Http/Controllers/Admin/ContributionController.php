@@ -17,7 +17,7 @@ class ContributionController extends Controller
      */
     public function index()
     {
-        $contributions = Contribution::with('member')->get();
+        $contributions = Contribution::with('member')->where('status', 'confirmed')->get();
         return view('admin.contributions.index', compact('contributions'));
     }
 

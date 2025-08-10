@@ -101,7 +101,8 @@ public function store(Request $request)
                 'value' => (float) $validated['amount'],
                 'description' => $validated['description'] ?? 'Contribuição de ' . $member->name,
             ];
-            $dueDate = $validated['contribution_date'];
+            // vencimento em 3 dias úteis
+            $dueDate = now()->addDays(3)->format('Y-m-d');
 
             // Selecionar método de pagamento
             $asaasResponse = null;

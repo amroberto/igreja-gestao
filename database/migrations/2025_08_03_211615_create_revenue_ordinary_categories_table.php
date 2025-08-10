@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('revenue_ordinary_others', function (Blueprint $table) {
+        Schema::create('revenue_ordinary_categories', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->timestamps();

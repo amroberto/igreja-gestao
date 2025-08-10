@@ -82,7 +82,7 @@
                         </div>
 
                         <div class="row mb-4">
-                            <h5 class="mb-3">Tipo de Cobrança</h5>
+                            <h5 class="mb-3">Forma de Pagamento</h5>
                             <div class="col-md-12">
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" name="payment_method" id="boleto" value="boleto_bancario" {{ old('payment_method', 'boleto_bancario') == 'boleto_bancario' ? 'checked' : '' }}>
@@ -157,6 +157,25 @@
                             </button>
                         </div>
                     </form>
+
+                    <!-- Modal para perguntar sobre salvar o cartão -->
+                    <div class="modal fade" id="saveCardModal" tabindex="-1" aria-labelledby="saveCardModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="saveCardModalLabel">Salvar Cartão</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    Deseja salvar este cartão para facilitar futuras contribuições?
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Não</button>
+                                    <button type="button" class="btn btn-primary" id="saveCardButton">Sim</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -168,6 +187,23 @@
 <script>
 (function () {
     document.addEventListener('DOMContentLoaded', function () {
+        // Função para validar o número do cartão com o algoritmo Luhn
+        function validateLuhn(cardNumber) {
+            cardNumber = cardNumber.replace(/\s/g, '');
+            let sum = 0;
+            let isEven = false;
+            for (let i = cardNumber.length - 1; i >= 0; i--) {
+                let digit = parseInt(cardNumber[i], 10);
+                if (isEven) {
+                    digit *= 2;
+                    if (digit > 9) digit -= 9;
+                }
+                sum += digit;
+                isEven = !isEven;
+            }
+            return sum % 10 === 0;
+        }
+
         // Aplicar máscaras
         if (typeof jQuery !== 'undefined' && $.fn.mask) {
             $('#amount').mask('000.000.000,00', { reverse: true });
@@ -353,11 +389,18 @@
             // Validar campos de cartão de crédito (apenas se payment_method for creditcard)
             const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
             if (paymentMethod === 'creditcard') {
-                if (!/^\d{13,19}$/.test(cardNumberInput.value.replace(/\s/g, ''))) {
+                // Validar número do cartão com Luhn
+                if (!/^\d{4}\s?\d{4}\s?\d{4}\s?\d{1,7}$/.test(cardNumberInput.value)) {
                     cardNumberInput.classList.add('border-red-500');
                     cardNumberInput.classList.remove('border-green-500');
                     cardNumberError.classList.remove('contribution-hidden');
                     cardNumberError.textContent = 'O número do cartão é inválido.';
+                    isValid = false;
+                } else if (!validateLuhn(cardNumberInput.value)) {
+                    cardNumberInput.classList.add('border-red-500');
+                    cardNumberInput.classList.remove('border-green-500');
+                    cardNumberError.classList.remove('contribution-hidden');
+                    cardNumberError.textContent = 'O número do cartão não é válido (falha na validação Luhn).';
                     isValid = false;
                 } else {
                     cardNumberInput.classList.remove('border-red-500');
@@ -365,6 +408,7 @@
                     cardNumberError.classList.add('contribution-hidden');
                 }
 
+                // Validar mês de expiração
                 const expiryMonth = parseInt(cardExpiryMonthInput.value, 10);
                 if (isNaN(expiryMonth) || expiryMonth < 1 || expiryMonth > 12) {
                     cardExpiryMonthInput.classList.add('border-red-500');
@@ -378,12 +422,21 @@
                     cardExpiryMonthError.classList.add('contribution-hidden');
                 }
 
+                // Validar ano de expiração e verificar se o cartão está vencido
                 const expiryYear = parseInt(cardExpiryYearInput.value, 10);
-                if (isNaN(expiryYear) || expiryYear < {{ date('Y') }} || expiryYear > 2099) {
+                const currentYear = new Date().getFullYear();
+                const currentMonth = new Date().getMonth() + 1; // Mês atual (1-12)
+                if (isNaN(expiryYear) || expiryYear < currentYear || expiryYear > 2099) {
                     cardExpiryYearInput.classList.add('border-red-500');
                     cardExpiryYearInput.classList.remove('border-green-500');
                     cardExpiryYearError.classList.remove('contribution-hidden');
                     cardExpiryYearError.textContent = 'Ano de validade inválido ({{ date('Y') }}-2099).';
+                    isValid = false;
+                } else if (expiryYear === currentYear && expiryMonth < currentMonth) {
+                    cardExpiryMonthInput.classList.add('border-red-500');
+                    cardExpiryMonthInput.classList.remove('border-green-500');
+                    cardExpiryMonthError.classList.remove('contribution-hidden');
+                    cardExpiryMonthError.textContent = 'O cartão está vencido.';
                     isValid = false;
                 } else {
                     cardExpiryYearInput.classList.remove('border-red-500');
@@ -391,6 +444,7 @@
                     cardExpiryYearError.classList.add('contribution-hidden');
                 }
 
+                // Validar CVC
                 if (!/^\d{3,4}$/.test(cardCvcInput.value)) {
                     cardCvcInput.classList.add('border-red-500');
                     cardCvcInput.classList.remove('border-green-500');
@@ -403,6 +457,7 @@
                     cardCvcError.classList.add('contribution-hidden');
                 }
 
+                // Validar nome do titular
                 if (!cardHolderNameInput.value) {
                     cardHolderNameInput.classList.add('border-red-500');
                     cardHolderNameInput.classList.remove('border-green-500');
@@ -434,7 +489,11 @@
         // Submissão do formulário
         document.getElementById('contribution-form').addEventListener('submit', async function (event) {
             event.preventDefault();
-            if (!validateForm()) return;
+            if (!validateForm()) {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Criar Contribuição';
+                return;
+            }
 
             const serverError = document.getElementById('server-error');
             submitButton.disabled = true;
@@ -455,21 +514,29 @@
                 formData.set('end_date', `${endDateValue}-01`);
             }
 
-            // Remover campos de cartão de crédito se payment_method não for creditcard
+            // Limpar espaços do número do cartão de crédito
             const paymentMethod = formData.get('payment_method');
-            if (paymentMethod !== 'creditcard') {
-                formData.delete('creditCard[number]');
-                formData.delete('creditCard[expiryMonth]');
-                formData.delete('creditCard[expiryYear]');
-                formData.delete('creditCard[ccv]');
-                formData.delete('creditCard[holderName]');
-                formData.delete('creditCard[holderInfo][name]');
-                formData.delete('creditCard[holderInfo][email]');
-                formData.delete('creditCard[holderInfo][cpfCnpj]');
-                formData.delete('creditCard[holderInfo][postalCode]');
-                formData.delete('creditCard[holderInfo][addressNumber]');
-                formData.delete('creditCard[holderInfo][phone]');
-                formData.delete('creditCard[holderInfo][mobilePhone]');
+            let creditCardData = null;
+            if (paymentMethod === 'creditcard') {
+                const cardNumber = formData.get('creditCard[number]').replace(/\s/g, '');
+                formData.set('creditCard[number]', cardNumber);
+                // Armazenar dados do cartão para uso posterior (salvar cartão)
+                creditCardData = {
+                    number: cardNumber,
+                    expiryMonth: formData.get('creditCard[expiryMonth]'),
+                    expiryYear: formData.get('creditCard[expiryYear]'),
+                    ccv: formData.get('creditCard[ccv]'),
+                    holderName: formData.get('creditCard[holderName]'),
+                    holderInfo: {
+                        name: formData.get('creditCard[holderInfo][name]'),
+                        email: formData.get('creditCard[holderInfo][email]'),
+                        cpfCnpj: formData.get('creditCard[holderInfo][cpfCnpj]'),
+                        postalCode: formData.get('creditCard[holderInfo][postalCode]'),
+                        addressNumber: formData.get('creditCard[holderInfo][addressNumber]'),
+                        phone: formData.get('creditCard[holderInfo][phone]'),
+                        mobilePhone: formData.get('creditCard[holderInfo][mobilePhone]'),
+                    }
+                };
             }
 
             // Log dos dados enviados para depuração
@@ -504,29 +571,79 @@
                     return;
                 }
 
-                // Abrir boleto ou QR Code do PIX
-                if (data.bankSlipUrl) {
+                // Manipular sucesso com base no método de pagamento
+                if (paymentMethod === 'boleto_bancario' && data.bankSlipUrl) {
                     window.open(data.bankSlipUrl, '_blank');
-                } else if (data.pixQrCode || data.qrCode) {
-                    const pixWindow = window.open('', '_blank', 'width=400,height=600');
+                    alert('Cobrança criada com sucesso! O boleto foi aberto em uma nova aba.');
+                    setTimeout(() => {
+                        window.location.href = '{{ route('member.contributions.index') }}';
+                    }, 500);
+                } else if (paymentMethod === 'pix' && (data.pixQrCode || data.pixPayload)) {
+                    const width = 400;
+                    const height = 600;
+                    const left = (screen.width - width) / 2;
+                    const top = (screen.height - height) / 2;
+                    const pixWindow = window.open('', '_blank', `width=${width},height=${height},left=${left},top=${top}`);
                     pixWindow.document.write(`
                         <html>
                             <head>
                                 <title>QR Code PIX</title>
                                 <style>
-                                    body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f0f0f0; font-family: Arial, sans-serif; }
-                                    .container { text-align: center; padding: 20px; }
-                                    img { max-width: 300px; max-height: 300px; margin-bottom: 20px; }
-                                    .copy-paste { margin-top: 10px; padding: 10px; background: #fff; border: 1px solid #ccc; border-radius: 5px; }
-                                    .copy-paste input { width: 100%; padding: 8px; margin-bottom: 10px; font-size: 14px; }
-                                    .copy-paste button { padding: 8px 16px; background: #007bff; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
-                                    .copy-paste button:hover { background: #0056b3; }
+                                    body {
+                                        display: flex;
+                                        justify-content: center;
+                                        align-items: center;
+                                        min-height: 100vh;
+                                        margin: 0;
+                                        background: #f0f0f0;
+                                        font-family: Arial, sans-serif;
+                                        text-align: center;
+                                    }
+                                    .container {
+                                        padding: 20px;
+                                        background: white;
+                                        border-radius: 8px;
+                                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+                                        max-width: 360px;
+                                        width: 100%;
+                                    }
+                                    img {
+                                        max-width: 300px;
+                                        max-height: 300px;
+                                        margin-bottom: 20px;
+                                    }
+                                    .copy-paste {
+                                        margin-top: 10px;
+                                        padding: 10px;
+                                        background: #fff;
+                                        border: 1px solid #ccc;
+                                        border-radius: 5px;
+                                    }
+                                    .copy-paste input {
+                                        width: 100%;
+                                        padding: 8px;
+                                        margin-bottom: 10px;
+                                        font-size: 14px;
+                                        border: 1px solid #ccc;
+                                        border-radius: 4px;
+                                    }
+                                    .copy-paste button {
+                                        padding: 8px 16px;
+                                        background: #007bff;
+                                        color: #fff;
+                                        border: none;
+                                        border-radius: 5px;
+                                        cursor: pointer;
+                                    }
+                                    .copy-paste button:hover {
+                                        background: #0056b3;
+                                    }
                                 </style>
                             </head>
                             <body>
                                 <div class="container">
-                                    <h3>Pagamento via PIX</h3>
-                                    <img src="data:image/png;base64,${data.pixQrCode || data.qrCode}" alt="QR Code PIX">
+                                    <h3>Contribuição via PIX</h3>
+                                    ${data.pixQrCode ? `<img src="data:image/png;base64,${data.pixQrCode}" alt="QR Code PIX">` : ''}
                                     <div class="copy-paste">
                                         <p><strong>Código PIX (Copia e Cola):</strong></p>
                                         <input type="text" value="${data.pixPayload || ''}" readonly>
@@ -537,13 +654,58 @@
                         </html>
                     `);
                     pixWindow.document.close();
-                }
+                    alert('Cobrança criada com sucesso! O QR Code PIX foi aberto em uma nova janela.');
+                    setTimeout(() => {
+                        window.location.href = '{{ route('member.contributions.index') }}';
+                    }, 500);
+                } else if (paymentMethod === 'creditcard' && data.cardData) {
+                    const saveCardButton = document.getElementById('saveCardButton');
+                    saveCardButton.onclick = async function () {
+                        try {
+                            const saveResponse = await fetch('{{ route('member.credit-cards.store') }}', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                },
+                                body: JSON.stringify({
+                                    member_id: '{{ $member->id }}',
+                                    cardData: creditCardData,
+                                    asaas_payment_id: data.asaas_payment_id,
+                                }),
+                            });
 
-                // Exibir mensagem de sucesso e redirecionar
-                alert('Cobrança criada com sucesso!');
-                setTimeout(() => {
-                    window.location.href = '{{ route('member.contributions.index') }}';
-                }, 500);
+                            const saveData = await saveResponse.json();
+                            if (!saveResponse.ok) {
+                                serverError.classList.remove('contribution-hidden');
+                                serverError.textContent = saveData.message || 'Erro ao salvar o cartão';
+                                return;
+                            }
+
+                            alert('Cartão salvo com sucesso!');
+                        } catch (error) {
+                            console.error('Erro ao salvar cartão:', error);
+                            serverError.classList.remove('contribution-hidden');
+                            serverError.textContent = 'Erro ao salvar cartão: ' + error.message;
+                        } finally {
+                            bootstrap.Modal.getInstance(document.getElementById('saveCardModal')).hide();
+                            setTimeout(() => {
+                                window.location.href = '{{ route('member.contributions.index') }}';
+                            }, 500);
+                        }
+                    };
+
+                    // Exibir o modal
+                    const modal = new bootstrap.Modal(document.getElementById('saveCardModal'));
+                    modal.show();
+                } else {
+                    // Caso de erro ou resposta inesperada
+                    serverError.classList.remove('contribution-hidden');
+                    serverError.textContent = data.message || 'Erro ao processar a cobrança';
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Criar Contribuição';
+                    return;
+                }
             } catch (error) {
                 console.error('Erro na requisição:', error);
                 serverError.classList.remove('contribution-hidden');

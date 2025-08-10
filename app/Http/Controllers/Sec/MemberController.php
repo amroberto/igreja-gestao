@@ -12,7 +12,7 @@ use App\Enums\UserTypeEnum;
 use App\Models\Contribution;
 use Illuminate\Http\Request;
 use App\Models\ParochialUnion;
-use App\Services\AsaasCustomerService;
+use App\Services\Asaas\AsaasCustomerService;
 use App\Enums\MaritalStatusEnum;
 use App\Enums\PaymentMethodEnum;
 use App\Enums\DeliveryMethodEnum;

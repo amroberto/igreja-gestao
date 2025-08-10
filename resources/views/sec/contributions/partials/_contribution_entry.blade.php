@@ -60,8 +60,8 @@
                     <div class="input-group-prepend">
                         <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
                     </div>
-                    <input type="number" name="contributions[{{ $index }}][amount]" id="amount_{{ $index }}"
-                           class="form-control" placeholder="0.00" min="0" step="0.01" required>
+                    <input type="text" name="contributions[{{ $index }}][amount]" id="amount_{{ $index }}"
+                           class="form-control" placeholder="0,00" required>
                 </div>
             </div>
 

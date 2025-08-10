@@ -24,7 +24,7 @@ class ContributionController extends Controller
     {
         $communityId = Auth::user()->community_id;
 
-        $contributions = Contribution::where('community_id', $communityId)
+        $contributions = Contribution::where('community_id', $communityId)->where('status', 'confirmed')
             ->orderBy('contribution_date', 'desc')
             ->orderBy('created_at', 'desc')
             ->paginate(10);

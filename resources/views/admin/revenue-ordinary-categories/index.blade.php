@@ -1,9 +1,9 @@
 @extends('adminlte::page')
 
-@section('title', __('Categoria - Outras Receitas Ordinárias'))
+@section('title', __('Categorias - Receitas Ordinárias'))
 
 @section('content_header')
-    <h1 class="m-0 text-dark">{{ __('Categorias - Outras Receitas Ordinárias') }}</h1>
+    <h1 class="m-0 text-dark">{{ __('Cadastro - Categoria Receitas Ordinárias') }}</h1>
 @stop
 
 @section('content')
@@ -12,12 +12,12 @@
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">{{ __('Home') }}</a></li>
-            <li class="breadcrumb-item active" aria-current="page">{{ __('Categoria - Outras Receitas Ordinárias') }}</li>
+            <li class="breadcrumb-item active" aria-current="page">{{ __('Categorias - Receitas Ordinárias') }}</li>
         </ol>
     </nav>
 
     <!-- Card Principal -->
-    <x-adminlte-card title="{{ __('Lista de Categoria de Outras Receitas Ordinárias') }}" theme="secondary" collapsible>
+    <x-adminlte-card title="{{ __('Lista de Categorias - Receitas Ordinárias') }}" theme="secondary" collapsible>
         <!-- Alertas -->
         @if (session('success'))
             <x-adminlte-alert theme="success" title="{{ __('Sucesso') }}" dismissable>
