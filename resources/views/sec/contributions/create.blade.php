@@ -66,10 +66,10 @@
         document.addEventListener('DOMContentLoaded', function () {
             const entriesContainer = document.getElementById('contribution-entries');
             const addEntryBtn = document.getElementById('add-entry-btn');
+            const form = document.getElementById('contribution-form');
 
             // Função para formatar número no formato brasileiro (1.234,56)
             function formatNumber(value) {
-                // Converte para número, arredonda para 2 casas decimais
                 const num = parseFloat(value) || 0;
                 return num.toLocaleString('pt-BR', {
                     minimumFractionDigits: 2,
@@ -79,24 +79,23 @@
 
             // Função para desformatar número (converte 1.234,56 para 1234.56)
             function unformatNumber(value) {
-                // Remove pontos de milhar e substitui vírgula por ponto
                 return parseFloat(value.replace(/\./g, '').replace(',', '.')) || 0;
             }
 
-            // Função para aplicar formatação ao campo de valor
+            // Função para aplicar formatação visual ao campo de valor
             function formatAmountField(input) {
-                const rawValue = unformatNumber(input.value);
-                input.value = formatNumber(rawValue);
+                const rawValue = parseFloat(input.value) || 0;
+                input.dataset.displayValue = formatNumber(rawValue);
+                input.value = rawValue.toFixed(2); // Mantém o valor numérico para o backend
             }
 
             // Função para definir o mês/ano atual nos campos de Mês Inicial
             function setDefaultStartDate(row) {
                 const today = new Date();
                 const year = today.getFullYear();
-                const month = String(today.getMonth() + 1).padStart(2, '0'); // +1 porque getMonth() é 0-indexed
+                const month = String(today.getMonth() + 1).padStart(2, '0');
                 const defaultDate = `${year}-${month}`;
 
-                // Define o valor padrão apenas para os campos start_date vazios na linha fornecida
                 const startDateInput = row.querySelector('input[type="month"][name$="[start_date]"]');
                 if (startDateInput && !startDateInput.value) {
                     startDateInput.value = defaultDate;
@@ -118,7 +117,6 @@
                     endDateGroup.style.display = 'block';
                 }
 
-                // Define o mês/ano atual ao atualizar os campos
                 setDefaultStartDate(row);
             }
 
@@ -148,6 +146,20 @@
                     });
             }
 
+            // Evento para formatar o campo de valor (visual apenas)
+            entriesContainer.addEventListener('input', function (e) {
+                if (e.target.name && e.target.name.includes('[amount]')) {
+                    const input = e.target;
+                    input.value = input.value.replace(/[^0-9.]/g, ''); // Permite apenas números e ponto
+                }
+            });
+
+            entriesContainer.addEventListener('blur', function (e) {
+                if (e.target.name && e.target.name.includes('[amount]')) {
+                    formatAmountField(e.target);
+                }
+            }, true);
+
             // Evento para mudanças nos campos
             entriesContainer.addEventListener('change', function (e) {
                 if (e.target.classList.contains('contribution-type')) {
@@ -160,20 +172,6 @@
                     fetchMemberName(e.target, row);
                 }
             });
-
-            // Evento para formatar o campo de valor
-            entriesContainer.addEventListener('input', function (e) {
-                if (e.target.name && e.target.name.includes('[amount]')) {
-                    // Remove qualquer formatação para permitir entrada limpa
-                    e.target.value = e.target.value.replace(/[^\d,]/g, '');
-                }
-            });
-
-            entriesContainer.addEventListener('blur', function (e) {
-                if (e.target.name && e.target.name.includes('[amount]')) {
-                    formatAmountField(e.target);
-                }
-            }, true);
 
             // Evento para remover linha
             entriesContainer.addEventListener('click', function (e) {
@@ -212,9 +210,16 @@
                     }
                 });
 
-                // Adiciona a nova linha e atualiza os campos
                 entriesContainer.appendChild(newRow);
-                updateDateFields(newRow); // Atualiza visibilidade e define mês/ano atual
+                updateDateFields(newRow);
+            });
+
+            // Antes do envio, garante que os valores de amount estão no formato correto
+            form.addEventListener('submit', function (e) {
+                entriesContainer.querySelectorAll('input[name$="[amount]"]').forEach(input => {
+                    const rawValue = parseFloat(input.value) || 0;
+                    input.value = rawValue.toFixed(2); // Garante formato numérico (ex.: 1234.56)
+                });
             });
 
             // Define o mês/ano atual para a linha inicial

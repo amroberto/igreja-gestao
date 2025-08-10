@@ -9,8 +9,10 @@ enum PaymentMethodEnum: string
     case BankSlip = 'boleto_bancario';
     case Pix = 'pix';
     case Cash = 'cash';
+
+    case BankCheck = 'bank_check';
     case BankTransfer = 'transf_bancaria';
-    
+
     public static function values(): array
     {
         return array_map(fn($case) => $case->value, self::cases());
@@ -31,6 +33,7 @@ enum PaymentMethodEnum: string
             self::BankSlip => __('Boleto Bancário'),
             self::Pix => __('PIX'),
             self::Cash => __('Dinheiro'),
+            self::BankCheck => __('Cheque'),
             self::BankTransfer => __('Transferência Bancária'),
         };
     }
@@ -43,8 +46,8 @@ enum PaymentMethodEnum: string
             self::BankSlip->value => __('Boleto Bancário'),
             self::Pix->value => __('PIX'),
             self::Cash->value => __('Dinheiro'),
+            self::BankCheck->value => __('Cheque'),
             self::BankTransfer->value => __('Transferência Bancária'),
         ];
     }
-
 }

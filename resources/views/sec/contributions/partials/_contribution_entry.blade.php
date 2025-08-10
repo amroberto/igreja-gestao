@@ -1,3 +1,5 @@
+<xaiArtifact artifact_id="e57e9c6c-141a-444d-a11e-d6fbdce8922e" artifact_version_id="3e072d40-73b8-4b9b-9226-0166415e308a" title="_contribution_entry.blade.php" contentType="text/blade">
+
 <div class="contribution-row card card-outline card-primary mb-3">
     <div class="card-body">
         {{-- Primeira Linha: Campos principais --}}
@@ -60,8 +62,8 @@
                     <div class="input-group-prepend">
                         <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
                     </div>
-                    <input type="text" name="contributions[{{ $index }}][amount]" id="amount_{{ $index }}"
-                           class="form-control" placeholder="0,00" required>
+                    <input type="number" name="contributions[{{ $index }}][amount]" id="amount_{{ $index }}"
+                           class="form-control" placeholder="0.00" min="0" step="0.01" required>
                 </div>
             </div>
 
