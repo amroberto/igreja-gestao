@@ -37,6 +37,12 @@
         </div>
         <div class="card-body">
             <div class="row">
+                <div class="col-md-3 col-sm-6">
+                    <strong><i class="fas fa-id-badge mr-1"></i> {{ __('ID do Membro') }}:</strong>
+                    <p class="text-muted">{{ $member->id }}</p>
+                </div>
+            </div>
+            <div class="row">
                 <div class="col-md-3 col-sm-6 mb-3">
                     <strong><i class="fas fa-user mr-1"></i> {{ __('Nome Completo') }}:</strong>
                     <p class="text-muted">{{ $member->name ?: 'N/A' }}</p>

@@ -41,7 +41,7 @@ return new class extends Migration
             $table->string('delivery_method')->default('correio');
             $table->string('payment_method')->default('transf_bancaria');
             $table->tinyInteger('due_day')->default(5);
-            $table->decimal('amount', 8, 2)->default(0.00);
+            $table->decimal('amount', 8, 2)->nullable()->default(0.00);
             $table->longText('observations')->nullable();
             $table->string('member_asaas_id')->nullable()->unique();
             $table->softDeletes();

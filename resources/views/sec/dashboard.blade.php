@@ -54,7 +54,7 @@
         <!-- Gráficos -->
         <div class="row mt-4">
             <div class="col-md-6">
-                <x-adminlte-card title="{{ __('Contribuições por Mês') }}" theme="secondary" collapsible>
+                <x-adminlte-card title="{{ __('Contribuições por Mês - :year', ['year' => $year ?? now()->year]) }}" theme="secondary" collapsible>
                     <canvas id="contribuicoesChart" height="200"></canvas>
                 </x-adminlte-card>
             </div>
