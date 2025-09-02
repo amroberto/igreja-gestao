@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Sec\MemberController;
 use App\Http\Controllers\Sec\DashboardController;
 use App\Http\Controllers\Sec\ContributionController;
-use App\Http\Controllers\Sec\RevenueOrdinaryOtherController;
+use App\Http\Controllers\Sec\MonthlyConfigController;
 
 Route::middleware(['auth', 'verified', 'access-sec-panel'])->prefix('sec')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('sec.dashboard');
@@ -18,4 +18,15 @@ Route::middleware(['auth', 'verified', 'access-sec-panel'])->prefix('sec')->grou
     Route::post('/contributions/generate-report-by-community', [ContributionController::class, 'generateReportByCommunity'])->name('contributions.generateReportByCommunity');
     Route::get('/members/{member}/pdf', [MemberController::class, 'pdf'])->name('sec.members.pdf');
     Route::get('/members/data', [MemberController::class, 'data'])->name('sec.members.data');
+    Route::get('/monthly-configs', [MonthlyConfigController::class, 'index'])->name('sec.monthly-configs.index');
+    Route::get('/monthly-configs/create', [MonthlyConfigController::class, 'create'])->name('sec.monthly-configs.create');
+    Route::post('/monthly-configs', [MonthlyConfigController::class, 'store'])->name('sec.monthly-configs.store');
+    Route::get('/monthly-configs/{monthlyConfig}/edit', [MonthlyConfigController::class, 'edit'])->name('sec.monthly-configs.edit');
+    Route::put('/monthly-configs/{monthlyConfig}', [MonthlyConfigController::class, 'update'])->name('sec.monthly-configs.update');
+    Route::delete('/monthly-configs/{monthlyConfig}', [MonthlyConfigController::class, 'destroy'])->name('sec.monthly-configs.destroy');
+    Route::get('/monthly-configs/{monthlyConfig}', [MonthlyConfigController::class, 'show'])->name('sec.monthly-configs.show');
+    Route::get('/monthly-configs/{monthlyConfig}/preview', [MonthlyConfigController::class, 'preview'])->name('sec.monthly-configs.preview');
+    Route::get('/monthly-configs/{monthlyConfig}/pdf', [MonthlyConfigController::class, 'pdf'])->name('sec.monthly-configs.pdf');
+    Route::post('/monthly-configs/upload-image', [MonthlyConfigController::class, 'uploadImage'])->name('sec.monthly-configs.upload-image');
+    
 });

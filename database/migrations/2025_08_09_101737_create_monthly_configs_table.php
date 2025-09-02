@@ -17,6 +17,7 @@ return new class extends Migration
             $table->date('reference_date');
             $table->string('motto')->nullable();
             $table->text('observations')->nullable();
+            $table->text('image_path')->nullable();
             $table->timestamps();
             $table->unique(['community_id', 'reference_date']);
         });

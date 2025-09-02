@@ -151,11 +151,11 @@ class MemberController extends Controller
         try {
             Log::debug('Iniciando carregamento do membro', ['member_id' => $member->id]);
 
-            // Carrega a relação community e as últimas 5 contribuições ordenadas por data descrescente
+            // Carrega a relação community e as últimas 10 contribuições com status confirmed e ordenadas por data descrescente
             $member->load([
                 'community',
                 'contributions' => function ($query) {
-                    $query->orderBy('contribution_date', 'desc')->take(5); // Limita a 5 contribuições
+                    $query->where('status', 'confirmed')->orderBy('contribution_date', 'desc')->take(10); // Limita a 10 contribuições
                 }
             ]);
 

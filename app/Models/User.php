@@ -6,6 +6,7 @@ use App\Enums\UserTypeEnum;
 use App\Models\UserCommunity;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
@@ -46,22 +47,22 @@ class User extends Authenticatable
         return strtolower($this->user_type) === 'sec';
     }
 
-    public function isDiretoria()
+    public function isDiretoria(): bool
     {
         return strtolower($this->user_type) === 'diretoria';
     }
 
-    public function isPresbiterio()
+    public function isPresbiterio(): bool
     {
         return strtolower($this->user_type) === 'presbiterio';
     }
 
-    public function community()
+    public function community(): BelongsTo
     {
         return $this->belongsTo(Community::class, 'community_id');
     }
 
-    public function communities()
+    public function communities(): BelongsToMany
     {
         return $this->belongsToMany(Community::class, 'user_community')
             ->using(UserCommunity::class)

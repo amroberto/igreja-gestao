@@ -402,6 +402,18 @@ return [
                     'icon' => 'fas fa-money-bill-wave',
                     'can'  => 'access-admin-panel',
                 ],
+                [
+                    'text' => 'Config. Cartas Contribuição',
+                    'url'  => 'sec/monthly-configs',
+                    'icon' => 'fas fa-cog',
+                    'can'  => 'access-sec-panel',
+                ],
+                [
+                    'text' => 'Gerar Cartas',
+                    'url'  => 'sec/letters/generate',
+                    'icon' => 'fas fa-file-alt',
+                    'can'  => 'access-sec-panel',
+                ],
             ],
         ],
         [
@@ -425,7 +437,6 @@ return [
                             'icon' => 'fas fa-money-bill-wave',
                             'can'  => 'access-sec-panel',
                         ],
-
                     ],
                 ],
             ],
@@ -558,6 +569,21 @@ return [
                     'type' => 'js',
                     'asset' => false,
                     'location' => '//cdnjs.cloudflare.com/ajax/libs/pace/1.0.2/pace.min.js',
+                ],
+            ],
+        ],
+        'Summernote' => [
+            'active' => false,
+            'files' => [
+                [
+                    'type' => 'js',
+                    'asset' => true,
+                    'location' => 'vendor/summernote/summernote-bs4.min.js',
+                ],
+                [
+                    'type' => 'css',
+                    'asset' => true,
+                    'location' => 'vendor/summernote/summernote-bs4.min.css',
                 ],
             ],
         ],

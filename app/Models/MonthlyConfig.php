@@ -12,46 +12,36 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class MonthlyConfig extends Model
 {
     protected $table = 'monthly_configs';
-    
+
     protected $fillable = [
         'community_id',
         'reference_date',
-        'motto', 
-        'observations'
+        'motto',
+        'observations',
+        'image_path',
     ];
 
-    protected $dates = ['reference_date'];
+    protected $casts = [
+        'reference_date' => 'date:Y-m',
+    ];
 
-    /**
-     * [Description for getReferenceAttribute]
-     *
-     * @return [type]
-     * 
-     */
-    public function getReferenceAttribute()
+    public function getReferenceAttribute(): string
     {
-        return $this->reference_date->format('m/Y');
+        return Carbon::parse($this->reference_date)->format('Y-m');
     }
 
-    /**
-     * [Description for community]
-     *
-     * @return BelongsTo
-     * 
-     */
-    public function community():  BelongsTo
+    public function community(): BelongsTo
     {
         return $this->belongsTo(Community::class);
     }
 
-    /**
-     * [Description for letters]
-     *
-     * @return HasMany
-     * 
-     */
-    public function letters():HasMany
+    public function letters(): HasMany
     {
         return $this->hasMany(ContributionLetter::class);
+    }
+
+    public function getImageUrlAttribute()
+    {
+        return $this->image_path ? asset('storage/' . $this->image_path) : null;
     }
 }
