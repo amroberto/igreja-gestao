@@ -7,7 +7,9 @@ use App\Models\Member;
 use Barryvdh\DomPDF\PDF;
 use App\Models\Community;
 use App\Enums\UserTypeEnum;
+use App\Enums\GenderEnum;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use App\Models\ParochialUnion;
 use App\Http\Requests\StoreMemberRequest;
 use App\Http\Requests\UpdateMemberRequest;
@@ -15,7 +17,6 @@ use App\Services\Asaas\AsaasCustomerService;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\RedirectResponse;
 
 class MemberController extends Controller
 {
@@ -190,22 +191,56 @@ class MemberController extends Controller
      */
     public function edit(Member $member)
     {
-        $communities = Community::all();
+        $communities = Community::orderBy('name')->get(); // Ordena por nome para melhor UX
+
         return view('admin.members.edit', compact('member', 'communities'));
     }
 
     /**
      * Update the specified member in storage.
-     *
-     * @param UpdateMemberRequest $request
-     * @param Member $member
-     * @return RedirectResponse
      */
-    public function update(UpdateMemberRequest $request, Member $member): RedirectResponse
+    public function update(Request $request, Member $member): RedirectResponse
     {
-        $member->update($request->validated());
+        // Validação direta (se não estiver usando UpdateMemberRequest personalizado)
+        $validated = $request->validate([
+            'first_name'       => 'required|string|max:255',
+            'middle_name'      => 'nullable|string|max:100',
+            'last_name'        => 'required|string|max:255',
+            'cpf'              => 'required|string|max:14|unique:members,cpf,' . $member->id,
+            'rg'               => 'nullable|string|max:20',
+            'birth_date'       => 'nullable|date',
+            'gender' => 'nullable|in:' . implode(',', array_map(fn($case) => $case->value, \App\Enums\GenderEnum::cases())),
+            'email'            => 'nullable|email|unique:members,email,' . $member->id,
+            'phone'            => 'nullable|string|max:20',
+            'cellphone'        => 'nullable|string|max:20',
+            'cep'              => 'nullable|string|max:9',
+            'address'          => 'nullable|string|max:255',
+            'number'           => 'nullable|string|max:20',
+            'complement'       => 'nullable|string|max:100',
+            'district'         => 'nullable|string|max:100',
+            'city'             => 'nullable|string|max:100',
+            'state'            => 'nullable|string|max:2',
+            'community_id'     => 'required|exists:communities,id',  // ← Permite alterar
+            'is_active'        => 'boolean',
+            'is_contributor'   => 'boolean',
+            'marital_status'   => 'nullable|string|max:50',
+            'father_name'      => 'nullable|string|max:255',
+            'mother_name'      => 'nullable|string|max:255',
+            'delivery_method'  => 'nullable|string|max:50',
+            'payment_method'   => 'nullable|string|max:50',
+            'due_day'          => 'nullable|integer|min:1|max:31',
+            'amount'           => 'nullable|numeric|min:0',
+            'observations'     => 'nullable|string',
+        ]);
 
-        return redirect()->route('admin.members.show', $member)->with('success', 'Membro atualizado com sucesso.');
+        // Remove máscaras se necessário (opcional, já que o JS faz isso)
+        $validated = $this->removeMasks($validated);
+
+        // Atualiza o membro
+        $member->update($validated);
+
+        return redirect()->route('admin.members.show', $member)
+            ->with('success', 'Membro atualizado com sucesso.');
     }
 
     /**

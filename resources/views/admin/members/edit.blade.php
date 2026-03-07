@@ -40,6 +40,7 @@
     <form action="{{ route('admin.members.update', $member->id) }}" method="POST" id="memberForm">
         @csrf
         @method('PUT')
+
         <h5 class="mb-3">{{ __('Informações Pessoais') }}</h5>
         <div class="mb-4 row">
             <div class="col-md-4">
@@ -70,6 +71,7 @@
                 </x-adminlte-input>
             </div>
         </div>
+
         <div class="mb-4 row">
             <div class="col-md-6">
                 <x-adminlte-input name="birth_date" label="{{ __('Data de Nascimento') }}" type="date" value="{{ $member->birth_date ? $member->birth_date->format('Y-m-d') : old('birth_date') }}" fgroup-class="has-feedback" error-key="birth_date" igroup-size="sm">
@@ -96,6 +98,7 @@
                 </x-adminlte-select>
             </div>
         </div>
+
         <div class="mb-4 row">
             <div class="col-md-3">
                 <x-adminlte-input name="cpf" label="{{ __('CPF') }}" id="cpf" value="{{ $member->cpf ?? old('cpf') }}" required fgroup-class="has-feedback" error-key="cpf" igroup-size="sm">
@@ -116,17 +119,29 @@
                 </x-adminlte-input>
             </div>
             <div class="col-md-6">
-                <x-adminlte-select name="community_id_display" label="{{ __('Comunidade') }}" fgroup-class="has-feedback" error-key="community_id" igroup-size="sm">
+                <x-adminlte-select 
+                    name="community_id" 
+                    label="{{ __('Comunidade') }}" 
+                    fgroup-class="has-feedback" 
+                    error-key="community_id" 
+                    igroup-size="sm" 
+                    required
+                >
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
                             <i class="fas fa-church"></i>
                         </div>
                     </x-slot>
-                    <option value="{{ $member->community_id ?? Auth::user()->community_id }}">
-                        {{ $member->community->name ?? Auth::user()->community->name ?? __('Comunidade do Usuário') }}
-                    </option>
+
+                    <option value="">{{ __('Selecione uma comunidade') }}</option>
+
+                    @foreach ($communities as $community)
+                        <option value="{{ $community->id }}" 
+                                {{ old('community_id', $member->community_id) == $community->id ? 'selected' : '' }}>
+                            {{ $community->name }}
+                        </option>
+                    @endforeach
                 </x-adminlte-select>
-                <input type="hidden" name="community_id" value="{{ $member->community_id ?? Auth::user()->community_id }}">
             </div>
         </div>
 
@@ -191,6 +206,7 @@
                 </x-adminlte-input>
             </div>
         </div>
+
         <div class="mb-4 row">
             <div class="col-md-3">
                 <x-adminlte-input name="complement" label="{{ __('Complemento') }}" value="{{ $member->complement ?? old('complement') }}" fgroup-class="has-feedback" error-key="complement" igroup-size="sm">
@@ -396,6 +412,8 @@
                 }).fail(function() {
                     alert('Erro ao buscar CEP.');
                 });
+            } else {
+                alert('Formato de CEP inválido.');
             }
         });
 
