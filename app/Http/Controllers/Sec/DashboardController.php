@@ -5,12 +5,10 @@ namespace App\Http\Controllers\Sec;
 use Carbon\Carbon;
 use App\Models\Member;
 use App\Models\Community;
-use Illuminate\View\View;
 use App\Models\Contribution;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Controller;
 
 class DashboardController extends Controller
 {
@@ -18,136 +16,136 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
         $communities = $user->communities;
+
         $error = null;
 
         if ($communities->isEmpty()) {
             return view('sec.dashboard', [
-                'error' => 'Nenhuma comunidade associada ao usuário.',
-                'communities' => collect(),
-                'membrosCadastrados' => 0,
-                'totalContribuintes' => 0,
-                'contribuicoesMes' => 0,
-                'contribuicoesAno' => 0,
-                'contribuicoesPorMes' => ['labels' => [], 'data' => []],
-                'crescimentoMembros' => ['labels' => [], 'data' => []],
-                'selectedCommunityId' => null
+                'error'                 => 'Nenhuma comunidade associada ao usuário.',
+                'communities'           => collect(),
+                'membrosCadastrados'    => 0,
+                'totalContribuintes'    => 0,
+                'totalContribuicoesMes'  => 0,
+                'totalContribuicoesAno'  => 0,
+                'contribuicoesPorMes'   => ['labels' => [], 'data' => []],
+                'crescimentoMembros'    => ['labels' => [], 'data' => []],
+                'membrosPorFaixaEtaria' => ['labels' => [], 'data' => []],
+                'selectedCommunityId'   => null,
             ]);
         }
 
-        // Get selected community
-        $selectedCommunityId = $request->input('community_id');
+        // Comunidade selecionada (ou a primeira por padrão)
         $accessibleCommunityIds = $communities->pluck('id')->toArray();
+        $selectedCommunityId = $request->input('community_id');
 
-        // Default to first community if none selected or invalid
         if (!$selectedCommunityId || !in_array((int) $selectedCommunityId, $accessibleCommunityIds)) {
             $selectedCommunityId = $accessibleCommunityIds[0];
-        } else {
-            $selectedCommunityId = (int) $selectedCommunityId;
         }
+        $selectedCommunityId = (int) $selectedCommunityId;
 
-        // Metrics for selected community
+        $now = Carbon::now();
+
+        // Métricas básicas
         $membrosCadastrados = Member::where('community_id', $selectedCommunityId)->count();
 
         $totalContribuintes = Member::where('community_id', $selectedCommunityId)
             ->where('is_contributor', true)
             ->count();
 
-        $contribuicoesMes = Contribution::where('contributions.community_id', $selectedCommunityId)
-            ->where('contributions.status', 'confirmed')
-            ->whereMonth('contributions.contribution_date', Carbon::now()->month)
-            ->whereYear('contributions.contribution_date', Carbon::now()->year)
-            ->sum('contributions.amount');
+        // Contribuições confirmadas
+        $totalContribuicoesMes = Contribution::where('community_id', $selectedCommunityId)
+            ->where('status', 'confirmed')
+            ->whereMonth('contribution_date', $now->month)
+            ->whereYear('contribution_date', $now->year)
+            ->sum('amount');
 
-        $contribuicoesAno = Contribution::where('contributions.community_id', $selectedCommunityId)
-            ->where('contributions.status', 'confirmed')
-            ->whereYear('contributions.contribution_date', Carbon::now()->year)
-            ->sum('contributions.amount');
+        $totalContribuicoesAno = Contribution::where('community_id', $selectedCommunityId)
+            ->where('status', 'confirmed')
+            ->whereYear('contribution_date', $now->year)
+            ->sum('amount');
 
-        $contribuicoesPorMes = Contribution::where('contributions.community_id', $selectedCommunityId)
-            ->where('contributions.status', 'confirmed')
-            ->whereYear('contributions.contribution_date', Carbon::now()->year)
-            ->selectRaw('MONTH(contributions.contribution_date) as mes, SUM(contributions.amount) as total')
+        // Gráfico: Contribuições por mês
+        $contribuicoesPorMesRaw = Contribution::where('community_id', $selectedCommunityId)
+            ->where('status', 'confirmed')
+            ->whereYear('contribution_date', $now->year)
+            ->selectRaw('MONTH(contribution_date) as mes, SUM(amount) as total')
             ->groupBy('mes')
             ->orderBy('mes')
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'label' => Carbon::create()->month($item->mes)->translatedFormat('M'),
-                    'total' => $item->total
-                ];
-            });
+            ->get();
+
         $contribuicoesPorMes = [
-            'labels' => $contribuicoesPorMes->pluck('label')->toArray(),
-            'data' => $contribuicoesPorMes->pluck('total')->toArray()
+            'labels' => $contribuicoesPorMesRaw->map(fn($item) => Carbon::create()->month($item->mes)->translatedFormat('M'))->toArray(),
+            'data'   => $contribuicoesPorMesRaw->pluck('total')->map(fn($v) => (float) $v)->toArray(),
         ];
 
-        $crescimentoMembros = Member::where('community_id', $selectedCommunityId)
-            ->whereYear('created_at', Carbon::now()->year)
+        // Gráfico: Crescimento de membros por mês
+        $crescimentoMembrosRaw = Member::where('community_id', $selectedCommunityId)
+            ->whereYear('created_at', $now->year)
             ->selectRaw('MONTH(created_at) as mes, COUNT(*) as total')
             ->groupBy('mes')
             ->orderBy('mes')
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'label' => Carbon::create()->month($item->mes)->translatedFormat('M'),
-                    'total' => $item->total
-                ];
-            });
+            ->get();
+
         $crescimentoMembros = [
-            'labels' => $crescimentoMembros->pluck('label')->toArray(),
-            'data' => $crescimentoMembros->pluck('total')->toArray()
+            'labels' => $crescimentoMembrosRaw->map(fn($item) => Carbon::create()->month($item->mes)->translatedFormat('M'))->toArray(),
+            'data'   => $crescimentoMembrosRaw->pluck('total')->toArray(),
         ];
 
-        $membrosAte10anos = Member::where('community_id', $selectedCommunityId)
-            ->where('birth_date', '>=', Carbon::now()->subYears(10))
-            ->count();
-        $membros11a14anos = Member::where('community_id', $selectedCommunityId)
-            ->where('birth_date', '<', Carbon::now()->subYears(10))
-            ->where('birth_date', '>=', Carbon::now()->subYears(14))
-            ->count();
-        $membros15a29anos = Member::where('community_id', $selectedCommunityId)->where('birth_date', '<', Carbon::now()->subYears(14))
-            ->where('birth_date', '>=', Carbon::now()->subYears(29))
-            ->count();
-        $membros30a59anos = Member::where('community_id', $selectedCommunityId)
-            ->where('birth_date', '<', Carbon::now()->subYears(29))
-            ->where('birth_date', '>=', Carbon::now()->subYears(59))
-            ->count();
-        $membros60a80anos = Member::where('community_id', $selectedCommunityId)
-            ->where('birth_date', '<', Carbon::now()->subYears(59))
-            ->where('birth_date', '>=', Carbon::now()->subYears(80))
-            ->count();
-        $membrosAcima80anos = Member::where('community_id', $selectedCommunityId)
-            ->where('birth_date', '<', Carbon::now()->subYears(80))
-            ->count();
+        // Faixa etária – uma única query eficiente
+        $faixasRaw = Member::where('community_id', $selectedCommunityId)
+            ->selectRaw("
+                CASE
+                    WHEN birth_date IS NULL THEN 'Idade não informada'
+                    WHEN birth_date >= ? THEN 'Até 10 anos'
+                    WHEN birth_date < ? AND birth_date >= ? THEN '11 a 14 anos'
+                    WHEN birth_date < ? AND birth_date >= ? THEN '15 a 29 anos'
+                    WHEN birth_date < ? AND birth_date >= ? THEN '30 a 59 anos'
+                    WHEN birth_date < ? AND birth_date >= ? THEN '60 a 80 anos'
+                    ELSE 'Acima de 80 anos'
+                END as faixa,
+                COUNT(*) as total
+            ", [
+                $now->copy()->subYears(10),
+                $now->copy()->subYears(10), $now->copy()->subYears(14),
+                $now->copy()->subYears(14), $now->copy()->subYears(29),
+                $now->copy()->subYears(29), $now->copy()->subYears(59),
+                $now->copy()->subYears(59), $now->copy()->subYears(80),
+            ])
+            ->groupBy('faixa')
+            ->pluck('total', 'faixa')
+            ->toArray();
 
         $membrosPorFaixaEtaria = [
-            'labels' => ['Até 10 anos', '11 a 14 anos', '15 a 29 anos', '30 a 59 anos', '60 a 80 anos', 'Acima de 80 anos'],
+            'labels' => [
+                'Até 10 anos',
+                '11 a 14 anos',
+                '15 a 29 anos',
+                '30 a 59 anos',
+                '60 a 80 anos',
+                'Acima de 80 anos',
+                'Idade não informada',
+            ],
             'data' => [
-                $membrosAte10anos,
-                $membros11a14anos,
-                $membros15a29anos,
-                $membros30a59anos,
-                $membros60a80anos,
-                $membrosAcima80anos
-            ]
+                $faixasRaw['Até 10 anos'] ?? 0,
+                $faixasRaw['11 a 14 anos'] ?? 0,
+                $faixasRaw['15 a 29 anos'] ?? 0,
+                $faixasRaw['30 a 59 anos'] ?? 0,
+                $faixasRaw['60 a 80 anos'] ?? 0,
+                $faixasRaw['Acima de 80 anos'] ?? 0,
+                $faixasRaw['Idade não informada'] ?? 0,
+            ],
         ];
 
         return view('sec.dashboard', compact(
             'communities',
+            'selectedCommunityId',
             'membrosCadastrados',
             'totalContribuintes',
-            'contribuicoesMes',
-            'contribuicoesAno',
+            'totalContribuicoesMes',
+            'totalContribuicoesAno',
             'contribuicoesPorMes',
             'crescimentoMembros',
-            'selectedCommunityId',
-            'membrosAte10anos',
-            'membros11a14anos',
-            'membros15a29anos',
-            'membros30a59anos',
-            'membros60a80anos',
-            'membrosAcima80anos',
-            'membrosPorFaixaEtaria', // Adicione esta linha
+            'membrosPorFaixaEtaria',
             'error'
         ));
     }

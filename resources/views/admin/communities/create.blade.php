@@ -150,9 +150,9 @@
                             <label class="form-label">{{ __('Endereço') }}</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-road"></i></span>
-                                <input type="text" class="form-control @error('address') is-invalid @enderror" id="address" name="address" value="{{ old('address') }}" placeholder="{{ __('Digite o endereço') }}">
+                                <input type="text" class="form-control @error('street') is-invalid @enderror" id="street" name="street" value="{{ old('street') }}" placeholder="{{ __('Digite o endereço') }}">
                             </div>
-                            @error('address')
+                            @error('street')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>

@@ -106,6 +106,6 @@ class MemberController extends Controller
      */
     public function index(): View
     {
-        return view('member.members.index');
+        return view('admin.members.index');
     }
 }

@@ -14,6 +14,11 @@ use App\Http\Controllers\Admin\RevenueOrdinaryCategoryController;
 Route::middleware(['auth', 'verified', 'access-admin-panel'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::resource('members', MemberController::class)->names('admin.members');
+    Route::get('/members/name-by-code/{code}', [MemberController::class, 'getNameByCode'])->name('admin.members.nameByCode');
+    Route::get('/contributions/reports/{id}/receipt', [ContributionController::class, 'generateReceipt'])->name('admin.contributions.receipt');
+    Route::get('/contributions/report/by-financial-entity', [ContributionController::class, 'reportByFinancialEntity'])->name('admin.contributions.report-by-financial-entity');
+    Route::post('/contributions/report/by-financial-entity', [ContributionController::class, 'generateReportByFinancialEntity'])->name('admin.contributions.generate-report-by-financial-entity');
+    Route::get('/contributions/report/by-community', [ContributionController::class, 'reportByCommunity'])->name('contributions.reportByCommunity'); 
     Route::resource('communities', CommunityController::class)->names('admin.communities');
     Route::resource('parishes', ParishController::class)->names('admin.parishes');
     Route::resource('users', UserController::class)->names('admin.users');

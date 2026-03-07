@@ -4,15 +4,15 @@
 
 @section('content_header')
 <div class="container-fluid">
-    <div class="row mb-2">
+    <div class="mb-2 row">
         <div class="col-sm-6">
-            <h1 class="m-0"><i class="fas fa-user-edit mr-2"></i>{{ __('Editar Membro') }}</h1>
+            <h1 class="m-0"><i class="mr-2 fas fa-user-edit"></i>{{ __('Editar Membro') }}</h1>
         </div>
         <div class="col-sm-6">
             <ol class="breadcrumb float-sm-right">
-                <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}"><i class="fas fa-tachometer-alt mr-1"></i>{{ __('Dashboard') }}</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('admin.members.index') }}"><i class="fas fa-users mr-1"></i>{{ __('Membros') }}</a></li>
-                <li class="breadcrumb-item active"><i class="fas fa-user-edit mr-1"></i>{{ __('Editar') }}</li>
+                <li class="breadcrumb-item"><a href="{{ route('sec.dashboard') }}"><i class="mr-1 fas fa-tachometer-alt"></i>{{ __('Dashboard') }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('sec.members.index') }}"><i class="mr-1 fas fa-users"></i>{{ __('Membros') }}</a></li>
+                <li class="breadcrumb-item active"><i class="mr-1 fas fa-user-edit"></i>{{ __('Editar') }}</li>
             </ol>
         </div>
     </div>
@@ -41,7 +41,7 @@
         @csrf
         @method('PUT')
         <h5 class="mb-3">{{ __('Informações Pessoais') }}</h5>
-        <div class="row mb-4">
+        <div class="mb-4 row">
             <div class="col-md-4">
                 <x-adminlte-input name="first_name" label="{{ __('Primeiro Nome') }}" value="{{ $member->first_name ?? old('first_name') }}" required fgroup-class="has-feedback" error-key="first_name" igroup-size="sm">
                     <x-slot name="prependSlot">
@@ -70,7 +70,7 @@
                 </x-adminlte-input>
             </div>
         </div>
-        <div class="row mb-4">
+        <div class="mb-4 row">
             <div class="col-md-6">
                 <x-adminlte-input name="birth_date" label="{{ __('Data de Nascimento') }}" type="date" value="{{ $member->birth_date ? $member->birth_date->format('Y-m-d') : old('birth_date') }}" fgroup-class="has-feedback" error-key="birth_date" igroup-size="sm">
                     <x-slot name="prependSlot">
@@ -96,7 +96,7 @@
                 </x-adminlte-select>
             </div>
         </div>
-        <div class="row mb-4">
+        <div class="mb-4 row">
             <div class="col-md-3">
                 <x-adminlte-input name="cpf" label="{{ __('CPF') }}" id="cpf" value="{{ $member->cpf ?? old('cpf') }}" required fgroup-class="has-feedback" error-key="cpf" igroup-size="sm">
                     <x-slot name="prependSlot">
@@ -131,7 +131,7 @@
         </div>
 
         <h5 class="mb-3">{{ __('Dados de Contato') }}</h5>
-        <div class="row mb-4">
+        <div class="mb-4 row">
             <div class="col-md-4">
                 <x-adminlte-input name="phone" label="{{ __('Telefone') }}" id="phone" value="{{ $member->phone ?? old('phone') }}" fgroup-class="has-feedback" error-key="phone" igroup-size="sm">
                     <x-slot name="prependSlot">
@@ -162,7 +162,7 @@
         </div>
 
         <h5 class="mb-3">{{ __('Endereço') }}</h5>
-        <div class="row mb-4">
+        <div class="mb-4 row">
             <div class="col-md-2">
                 <x-adminlte-input name="cep" label="{{ __('CEP') }}" id="cep" value="{{ $member->cep ?? old('cep') }}" fgroup-class="has-feedback" error-key="cep" igroup-size="sm">
                     <x-slot name="prependSlot">
@@ -191,7 +191,7 @@
                 </x-adminlte-input>
             </div>
         </div>
-        <div class="row mb-4">
+        <div class="mb-4 row">
             <div class="col-md-3">
                 <x-adminlte-input name="complement" label="{{ __('Complemento') }}" value="{{ $member->complement ?? old('complement') }}" fgroup-class="has-feedback" error-key="complement" igroup-size="sm">
                     <x-slot name="prependSlot">
@@ -231,7 +231,7 @@
         </div>
 
         <h5 class="mb-3">{{ __('Outras Informações') }}</h5>
-        <div class="row mb-4">
+        <div class="mb-4 row">
             <div class="col-md-4">
                 <x-adminlte-select name="marital_status" label="{{ __('Estado Civil') }}" fgroup-class="has-feedback" error-key="marital_status" igroup-size="sm">
                     <x-slot name="prependSlot">
@@ -272,7 +272,7 @@
         </div>
 
         <h5 class="mb-3">{{ __('Filiação') }}</h5>
-        <div class="row mb-4">
+        <div class="mb-4 row">
             <div class="col-md-6">
                 <x-adminlte-input name="father_name" label="{{ __('Nome do Pai') }}" value="{{ $member->father_name ?? old('father_name') }}" fgroup-class="has-feedback" error-key="father_name" igroup-size="sm">
                     <x-slot name="prependSlot">
@@ -294,7 +294,7 @@
         </div>
 
         <h5 class="mb-3">{{ __('Contribuição Mensal') }}</h5>
-        <div class="row mb-4">
+        <div class="mb-4 row">
             <div class="col-md-3">
                 <x-adminlte-select name="delivery_method" label="{{ __('Método de Envio') }}" fgroup-class="has-feedback" error-key="delivery_method" igroup-size="sm">
                     <x-slot name="prependSlot">
@@ -345,7 +345,7 @@
             </div>
         </div>
 
-        <div class="row mb-4">
+        <div class="mb-4 row">
             <div class="col-md-12">
                 <x-adminlte-textarea name="observations" label="{{ __('Observações') }}" value="{{ $member->observations ?? old('observations') }}" fgroup-class="has-feedback" error-key="observations" igroup-size="sm">
                     <x-slot name="prependSlot">
@@ -359,7 +359,7 @@
 
         <div class="row">
             <div class="col-md-12">
-                <x-adminlte-button type="submit" theme="primary" label="{{ __('Atualizar') }}" icon="fas fa-save" class="btn-lg mr-2" />
+                <x-adminlte-button type="submit" theme="primary" label="{{ __('Atualizar') }}" icon="fas fa-save" class="mr-2 btn-lg" />
                 <x-adminlte-button theme="secondary" label="{{ __('Voltar') }}" icon="fas fa-arrow-left" class="btn-lg" onclick="window.location='{{ route('sec.members.index') }}'" />
             </div>
         </div>

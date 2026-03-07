@@ -49,7 +49,7 @@ class CommunityController extends Controller
         $community->email = $request->email;
         $community->website = $request->website;
         $community->cep = $request->cep;
-        $community->address = $request->address;
+        $community->street= $request->street;
         $community->number = $request->number;
         $community->complement = $request->complement;
         $community->district = $request->district;
@@ -109,7 +109,7 @@ class CommunityController extends Controller
             'email' => 'nullable|email|max:255',
             'website' => 'nullable|url|max:255',
             'cep' => 'nullable|string|max:10',
-            'address' => 'nullable|string|max:255',
+            'street' => 'nullable|string|max:255',
             'number' => 'nullable|string|max:10',
             'complement' => 'nullable|string|max:255',
             'district' => 'nullable|string|max:255',

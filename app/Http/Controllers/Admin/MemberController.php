@@ -8,18 +8,26 @@ use Barryvdh\DomPDF\PDF;
 use App\Models\Community;
 use App\Enums\UserTypeEnum;
 use Illuminate\Http\Request;
+use App\Models\ParochialUnion;
+use App\Http\Requests\StoreMemberRequest;
+use App\Http\Requests\UpdateMemberRequest;
+use App\Services\Asaas\AsaasCustomerService;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\RedirectResponse;
 
 class MemberController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $members = Member::with('user')->get();
+        $communities = Community::all();
+        $members = Member::where('is_active', true)
+            ->with(['community', 'contributions'])
+            ->get();
 
         return view('admin.members.index', [
             'members' => $members
@@ -31,10 +39,9 @@ class MemberController extends Controller
      */
     public function create()
     {
-        $communitys = Community::all();
-        return view('admin.members.create', [
-            'communitys' => $communitys
-        ]);
+        $communities = Community::all();
+
+        return view('admin.members.create', ['communities' => $communities]);
     }
 
     private function removeMasks(array $data): array
@@ -51,12 +58,14 @@ class MemberController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request, AsaasCustomerService $asaas)
     {
         $data = $this->removeMasks($request->all());
         $member = new Member();
 
-        $member->name = $data['name'];
+        $member->first_name = $data['first_name'];
+        $member->middle_name = $data['middle_name'] ?? '';
+        $member->last_name = $data['last_name'] ?? '';
         $member->cpf = $data['cpf'];
         $member->rg = $data['rg'];
         $member->birth_date = $data['birth_date'];
@@ -81,9 +90,43 @@ class MemberController extends Controller
         $member->due_day = $data['due_day'];
 
         $amount = str_replace(['.', ','], ['', '.'], $data['amount']);
-        $member->amount = (float) $amount;
+        $member->amount = number_format((float) $amount, 2, '.', '');
 
         $member->observations = $data['observations'] ?? '';
+
+        $asaasPayload = [
+            'name' => trim($data['first_name'] . ' ' . ($data['middle_name'] ?? '') . ' ' . $data['last_name']),
+            'cpfCnpj' => $data['cpf'],
+            'email' => $data['email'] ?? null,
+            'phone' => $data['phone'] ?? null,
+            'mobilePhone' => $data['cellphone'] ?? null,
+            'address' => $data['address'] ?? null,
+            'addressNumber' => $data['number'] ?? null,
+            'complement' => $data['complement'] ?? null,
+            'province' => $data['district'] ?? null,
+            'postalCode' => $data['cep'] ?? null,
+        ];
+
+        // Verifica se já há member com CPF (talvez por outro cadastro anterior)
+        $existingMember = Member::where('cpf', $data['cpf'])->whereNotNull('member_asaas_id')->first();
+
+        if ($existingMember) {
+            // Se já tem ID Asaas, tentar atualizar no Asaas
+            try {
+                $asaas->updateCustomer($existingMember->member_asaas_id, $asaasPayload);
+                $member->member_asaas_id = $existingMember->member_asaas_id;
+            } catch (\Exception $e) {
+                Log::warning('Falha ao atualizar cliente Asaas existente.', ['cpf' => $data['cpf'], 'erro' => $e->getMessage()]);
+            }
+        } else {
+            // Criar novo cliente no Asaas
+            try {
+                $asaasCustomer = $asaas->createCustomer($asaasPayload);
+                $member->member_asaas_id = $asaasCustomer['id'] ?? null;
+            } catch (\Exception $e) {
+                Log::error('Erro ao criar cliente no Asaas ao cadastrar membro.', ['cpf' => $data['cpf'], 'erro' => $e->getMessage()]);
+            }
+        }
 
         $member->save();
 
@@ -97,14 +140,22 @@ class MemberController extends Controller
     {
         try {
             Log::debug('Iniciando carregamento do membro', ['member_id' => $member->id]);
-            // Carrega as relações se não estiverem carregadas
-            $member->load('contributions', 'community');
+
+            // Carrega a relação community e as últimas 10 contribuições com status confirmed e ordenadas por data descrescente
+            $member->load([
+                'community',
+                'contributions' => function ($query) {
+                    $query->where('status', 'confirmed')->orderBy('contribution_date', 'desc')->take(10); // Limita a 10 contribuições
+                }
+            ]);
+
             Log::debug('Membro carregado com sucesso', [
                 'member_id' => $member->id,
                 'birth_date' => $member->birth_date,
                 'contributions_count' => $member->contributions->count(),
                 'has_community' => $member->community ? true : false
             ]);
+
             return view('admin.members.show', compact('member'));
         } catch (\Exception $e) {
             Log::error('Erro ao carregar membro', [
@@ -116,100 +167,47 @@ class MemberController extends Controller
         }
     }
 
+    public function getNameByCode($id)
+    {
+        $user = Auth::user();
+        $communityId = $user->community_id;
+
+        $member = Member::find($id);
+
+        if (!$member) {
+            return response()->json(['name' => ''], 404);
+        }
+
+        return response()->json([
+            'name' => $member->name,
+            'community_id' => $member->community_id,
+            'belongs_to_user_community' => $member->community_id == $communityId,
+        ]);
+    }
+
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit($id)
+    public function edit(Member $member)
     {
-        try {
-            $member = Member::findOrFail($id);
-            $communities = Community::all();
-            Log::info('Formulário de edição completo do Member ID: ' . $id . ' carregado por usuário ID: ' . Auth::id());
-            return view('admin.members.edit', compact('member', 'communities'));
-        } catch (\Exception $e) {
-            Log::error('Erro ao carregar formulário de edição do Member ID: ' . $id . ': ' . $e->getMessage());
-            return redirect()->route('admin.members.index')->with('error', 'Erro ao carregar formulário.');
-        }
+        $communities = Community::all();
+        return view('admin.members.edit', compact('member', 'communities'));
     }
 
     /**
-     * Update the specified resource in storage.
+     * Update the specified member in storage.
+     *
+     * @param UpdateMemberRequest $request
+     * @param Member $member
+     * @return RedirectResponse
      */
-
-    public function update(Request $request, $id)
+    public function update(UpdateMemberRequest $request, Member $member): RedirectResponse
     {
-        try {
-            $member = Member::findOrFail($id);
-            $data = $this->removeMasks($request->all());
+        $member->update($request->validated());
 
-            $validatedData = validator($data, [
-                'name' => ['required', 'string', 'max:255'],
-                'email' => ['nullable', 'string', 'email', 'max:255'],
-                'cpf' => ['required', 'string', 'unique:members,cpf,' . $id],
-                'community_id' => ['required', 'exists:communities,id'],
-                'rg' => ['nullable', 'string', 'max:20'],
-                'birth_date' => ['nullable', 'date'],
-                'phone' => ['nullable', 'string'],
-                'cellphone' => ['nullable', 'string'],
-                'cep' => ['nullable', 'string'],
-                'address' => ['nullable', 'string', 'max:255'],
-                'number' => ['nullable', 'string', 'max:10'],
-                'complement' => ['nullable', 'string', 'max:50'],
-                'district' => ['nullable', 'string', 'max:100'],
-                'city' => ['nullable', 'string', 'max:100'],
-                'state' => ['nullable', 'string'],
-                'marital_status' => ['nullable', 'string', 'max:100'],
-                'father_name' => ['nullable', 'string', 'max:255'],
-                'mother_name' => ['nullable', 'string', 'max:255'],
-                'is_active' => ['boolean'],
-                'is_contributor' => ['boolean'],
-                'delivery_method' => ['nullable', 'string', 'max:100'],
-                'payment_method' => ['nullable', 'string', 'max:100'],
-                'due_day' => ['nullable', 'integer', 'min:1', 'max:31'],
-                'observations' => ['nullable', 'string'],
-            ])->validate([
-                'cpf.required' => 'O campo CPF é obrigatório.',
-                'name.required' => 'O campo Nome é obrigatório.',
-                'community_id.required' => 'O campo Comunidade é obrigatório.',
-                'email.email' => 'O campo E-mail deve ser um endereço de e-mail válido.',
-                'rg.max' => 'O campo RG não pode ter mais de 20 caracteres.',
-                'birth_date.date' => 'O campo Data de Nascimento deve ser uma data válida.',
-                'phone.max' => 'O campo Telefone não pode ter mais de 15 caracteres.',
-                'cellphone.max' => 'O campo Celular não pode ter mais de 15 caracteres.',
-                'cep.max' => 'O campo CEP não pode ter mais de 10 caracteres.',
-                'address.max' => 'O campo Endereço não pode ter mais de 255 caracteres.',
-                'number.max' => 'O campo Número não pode ter mais de 10 caracteres.',
-                'complement.max' => 'O campo Complemento não pode ter mais de 50 caracteres.',
-                'district.max' => 'O campo Bairro não pode ter mais de 100 caracteres.',
-                'city.max' => 'O campo Cidade não pode ter mais de 100 caracteres.',
-                'state.max' => 'O campo Estado não pode ter mais de 2 caracteres.',
-                'marital_status.max' => 'O campo Estado Civil não pode ter mais de 100 caracteres.',
-                'father_name.max' => 'O campo Nome do Pai não pode ter mais de 255 caracteres.',
-                'mother_name.max' => 'O campo Nome da Mãe não pode ter mais de 255 caracteres.',
-                'delivery_method.max' => 'O campo Método de Entrega não pode ter mais de 100 caracteres.',
-                'payment_method.max' => 'O campo Método de Pagamento não pode ter mais de 100 caracteres.',
-                'due_day.min' => 'O campo Dia de Vencimento deve ser pelo menos 1.',
-                'due_day.max' => 'O campo Dia de Vencimento não pode ser maior que 31.',
-            ]);
-
-            $member->update($validatedData);
-
-            if ($member->user) {
-                $member->user->update([
-                    'name' => $request->name,
-                    'email' => $request->email,
-                    'community_id' => $request->community_id,
-                    'status' => $request->is_active,
-                ]);
-            }
-
-            Log::info('Member ID: ' . $id . ' atualizado por usuário ID: ' . Auth::id());
-            return redirect()->route('admin.members.index')->with('success', 'Membro atualizado com sucesso.');
-        } catch (\Exception $e) {
-            Log::error('Erro ao atualizar Member ID: ' . $id . ': ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Erro ao atualizar membro: ' . $e->getMessage());
-        }
+        return redirect()->route('admin.members.show', $member)->with('success', 'Membro atualizado com sucesso.');
     }
+
     /**
      * Remove the specified resource from storage.
      */
@@ -217,10 +215,13 @@ class MemberController extends Controller
     {
         //
     }
+
     public function pdf(Member $member, PDF $pdf)
     {
+        $parochialUnion = ParochialUnion::first();
+
         $member->load('contributions.community');
-        $pdf = $pdf->loadView('sec.members.pdf', compact('member'));
+        $pdf = $pdf->loadView('admin.members.pdf', compact('member', 'parochialUnion'));
         return $pdf->download('membro_' . $member->id . '.pdf');
     }
 }

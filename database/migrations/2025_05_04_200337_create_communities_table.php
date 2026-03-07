@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('cnpj')->unique()->nullable();
             $table->foreignId('parish_id')->constrained()->onDelete('cascade');
             $table->string('cep')->nullable();
-            $table->string('address')->nullable();
+            $table->string('street')->nullable();
             $table->string('number')->nullable();
             $table->string('complement')->nullable();
             $table->string('district')->nullable();

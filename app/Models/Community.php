@@ -22,7 +22,7 @@ class Community extends Model
         'cnpj',
         'parish_id',
         'cep',
-        'address',
+        'street',
         'number',
         'complement',
         'district',
