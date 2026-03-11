@@ -64,7 +64,7 @@ class MemberController extends Controller
         $data = $this->removeMasks($request->all());
         $member = new Member();
 
-        $member->first_name = $data['first_name'];
+        $member->first_name = $data['first_name'] ?? '';
         $member->middle_name = $data['middle_name'] ?? '';
         $member->last_name = $data['last_name'] ?? '';
         $member->cpf = $data['cpf'];
@@ -94,9 +94,13 @@ class MemberController extends Controller
         $member->amount = number_format((float) $amount, 2, '.', '');
 
         $member->observations = $data['observations'] ?? '';
-
+        
         $asaasPayload = [
-            'name' => trim($data['first_name'] . ' ' . ($data['middle_name'] ?? '') . ' ' . $data['last_name']),
+            'name' => trim(
+                ($data['first_name'] ?? '') . ' ' .
+                ($data['middle_name'] ?? '') . ' ' .
+                ($data['last_name'] ?? '')
+            ),
             'cpfCnpj' => $data['cpf'],
             'email' => $data['email'] ?? null,
             'phone' => $data['phone'] ?? null,
@@ -209,7 +213,7 @@ class MemberController extends Controller
             'cpf'              => 'required|string|max:14|unique:members,cpf,' . $member->id,
             'rg'               => 'nullable|string|max:20',
             'birth_date'       => 'nullable|date',
-            'gender' => 'nullable|in:' . implode(',', array_map(fn($case) => $case->value, \App\Enums\GenderEnum::cases())),
+            'gender'           => 'required|in:' . implode(',', array_map(fn($case) => $case->value, \App\Enums\GenderEnum::cases())),
             'email'            => 'nullable|email|unique:members,email,' . $member->id,
             'phone'            => 'nullable|string|max:20',
             'cellphone'        => 'nullable|string|max:20',

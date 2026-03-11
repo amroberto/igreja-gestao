@@ -29,21 +29,26 @@ class MemberController extends Controller
     }
 
     /**
-     * Exibe o painel do membro.
+     * Dashboard do membro
      */
     public function dashboard(): View
     {
-        Log::debug('Acessando o dashboard do membro', ['user_id' => Auth::id()]);
+        Log::debug('Acessando dashboard do membro', [
+            'user_id' => Auth::id()
+        ]);
+
         return view('member.dashboard');
     }
 
     /**
-     * Exibe o formulário de edição do membro.
+     * Formulário de edição do membro
      */
     public function edit(): View
     {
         $user = Auth::user();
+
         $member = Member::where('user_id', $user->id)->firstOrFail();
+
         $communities = Community::where('id', '!=', 1)->get();
 
         return view('member.member.edit', [
@@ -57,55 +62,143 @@ class MemberController extends Controller
     }
 
     /**
-     * Atualiza o perfil do membro.
-     *
-     * @param UpdateMemberRequest $request
-     * @param Member $member
-     * @param AsaasCustomerService $asaasCustomerService
-     * @return RedirectResponse
+     * Atualiza o membro e sincroniza com Asaas
      */
-    public function update(UpdateMemberRequest $request, Member $member, AsaasCustomerService $asaasCustomerService)
+    public function update(UpdateMemberRequest $request, Member $member): RedirectResponse
     {
-        Log::debug('Iniciando método update do MemberController', ['request_data' => $request->all(), 'member_id' => $member->id]);
+        Log::debug('Iniciando update do MemberController', [
+            'member_id' => $member->id
+        ]);
 
-        $data = $request->validated();
-        $data = $this->removeMasks($data);
+        $data = $this->removeMasks($request->validated());
 
         DB::beginTransaction();
+
         try {
+
             $member->update($data);
-            if ($member->asaas_member_id) {
-                $asaasCustomerService->updateCustomer($member->asaas_member_id, $data);
+
+            $payload = [
+                'name' => trim($member->first_name . ' ' . $member->middle_name . ' ' . $member->last_name),
+                'cpfCnpj' => $member->cpf,
+                'email' => $member->email,
+                'phone' => $member->phone,
+                'mobilePhone' => $member->cellphone,
+                'address' => $member->address,
+                'addressNumber' => $member->number,
+                'complement' => $member->complement,
+                'province' => $member->district,
+                'postalCode' => $member->cep,
+            ];
+
+            /**
+             * Se já existe ID do Asaas → atualizar
+             */
+            if ($member->member_asaas_id) {
+
+                Log::info('Atualizando cliente no Asaas', [
+                    'asaas_id' => $member->member_asaas_id
+                ]);
+
+                $this->asaas->updateCustomer(
+                    $member->member_asaas_id,
+                    $payload
+                );
             }
+
+            /**
+             * Se não existe ID → buscar por CPF
+             */
+            else {
+
+                Log::info('Buscando cliente no Asaas pelo CPF', [
+                    'cpf' => $member->cpf
+                ]);
+
+                $existingCustomer = $this->asaas->findCustomerByCpf($member->cpf);
+
+                /**
+                 * Cliente já existe no Asaas
+                 */
+                if (!empty($existingCustomer) && isset($existingCustomer['id'])) {
+
+                    Log::info('Cliente encontrado no Asaas', [
+                        'asaas_id' => $existingCustomer['id']
+                    ]);
+
+                    $member->member_asaas_id = $existingCustomer['id'];
+                    $member->save();
+
+                    $this->asaas->updateCustomer(
+                        $member->member_asaas_id,
+                        $payload
+                    );
+                }
+
+                /**
+                 * Cliente não existe → criar
+                 */
+                else {
+
+                    Log::info('Cliente não encontrado no Asaas. Criando...', [
+                        'cpf' => $member->cpf
+                    ]);
+
+                    $customer = $this->asaas->createCustomer($payload);
+
+                    if (!empty($customer) && isset($customer['id'])) {
+
+                        $member->member_asaas_id = $customer['id'];
+                        $member->save();
+
+                        Log::info('Cliente criado no Asaas', [
+                            'asaas_id' => $customer['id']
+                        ]);
+                    } else {
+
+                        Log::error('Erro ao criar cliente no Asaas', [
+                            'payload' => $payload,
+                            'response' => $customer
+                        ]);
+                    }
+                }
+            }
+
             DB::commit();
-            Log::info('Membro atualizado com sucesso', ['member_id' => $member->id]);
-            return redirect()->route('member.dashboard')->with('success', 'Perfil atualizado com sucesso.');
-        } catch (\Exception $e) {
+
+            return redirect()
+                ->route('member.dashboard')
+                ->with('success', 'Perfil atualizado com sucesso.');
+        }
+
+        catch (\Exception $e) {
+
             DB::rollBack();
-            Log::error('Erro ao atualizar membro', ['error' => $e->getMessage(), 'member_id' => $member->id]);
-            throw ValidationException::withMessages(['error' => 'Erro ao atualizar o perfil. Por favor, tente novamente.']);
+
+            Log::error('Erro ao sincronizar membro com Asaas', [
+                'member_id' => $member->id,
+                'error' => $e->getMessage()
+            ]);
+
+            throw ValidationException::withMessages([
+                'error' => 'Erro ao atualizar o perfil. Tente novamente.'
+            ]);
         }
     }
 
+    /**
+     * Remove máscaras de campos
+     */
     private function removeMasks(array $data): array
     {
         $fields = ['cnpj', 'cep', 'cpf', 'phone', 'cellphone'];
+
         foreach ($fields as $field) {
             if (isset($data[$field])) {
                 $data[$field] = preg_replace('/\D/', '', $data[$field]);
             }
         }
-        return $data;
-    }
 
-    /**
-     * [Description for index]
-     *
-     * @return View
-     * 
-     */
-    public function index(): View
-    {
-        return view('admin.members.index');
+        return $data;
     }
 }

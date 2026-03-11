@@ -1,227 +1,399 @@
 @extends('adminlte::page')
 
-@section('title', 'Cadastro de Membro')
+@section('title', __('Cadastro de Membro'))
 
-@section('content')
+@section('content_header')
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-md-12">
-            @if (session('success'))
-            <div class="alert alert-success">
-                {{ session('success') }}
-            </div>
-            @endif
-            @if (session('error'))
-            <div class="alert alert-danger">
-                {{ session('error') }}
-            </div>
-            @endif
+    <div class="row mb-2">
+        <div class="col-sm-6">
+            <h1 class="m-0"><i class="fas fa-user-plus mr-2"></i>{{ __('Cadastro de Membro') }}</h1>
+        </div>
+        <div class="col-sm-6">
+            <ol class="breadcrumb float-sm-right">
+                <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}"><i class="fas fa-tachometer-alt mr-1"></i>{{ __('Dashboard') }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('admin.members.index') }}"><i class="fas fa-users mr-1"></i>{{ __('Membros') }}</a></li>
+                <li class="breadcrumb-item active"><i class="fas fa-user-plus mr-1"></i>{{ __('Criar') }}</li>
+            </ol>
         </div>
     </div>
-    <br>
-    <form action="{{ route('admin.members.store') }}" method="post">
+</div>
+@endsection
+
+@section('content')
+@if (session('success'))
+<x-adminlte-alert theme="success" title="{{ __('Sucesso') }}" icon="fas fa-check-circle" dismissable>
+    {{ session('success') }}
+</x-adminlte-alert>
+@endif
+
+@if ($errors->any())
+<x-adminlte-alert theme="danger" title="{{ __('Erros de Validação') }}" icon="fas fa-exclamation-triangle" dismissable>
+    <ul class="mb-0">
+        @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</x-adminlte-alert>
+@endif
+
+<x-adminlte-card title="{{ __('Dados do Membro') }}" theme="primary" icon="fas fa-user" collapsible>
+    <form action="{{ route('admin.members.store') }}" method="POST" id="memberForm">
         @csrf
-        <div class="card">
-            <div class="card-header">
-                <h3>Cadastro de Membros</h3>
+        <h5 class="mb-3">{{ __('Informações Pessoais') }}</h5>
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <x-adminlte-input name="first_name" label="{{ __('Primeiro Nome') }}" value="{{ old('first_name') }}" required fgroup-class="has-feedback" error-key="first_name" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="form-group col-md-6">
-                        <label for="name">Nome</label>
-                        <input type="text" class="form-control" id="name" name="name" placeholder="Nome do Membro" required>
-                    </div>
-                    <div class="form-group col-md-3">
-                        <label for="cpf">cpf</label>
-                        <input type="text" class="form-control" id="cpf" name="cpf" placeholder="CPF">
-                    </div>
-                    <div class="form-group col-md-3">
-                        <label for="rg">RG</label>
-                        <input type="text" class="form-control" id="rg" name="rg" placeholder="RG">
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="form-group col-md-4">
-                        <label for="community_id">Comunidade</label>
-                        <select class="form-control" id="community_id" name="community_id">
-                            <option value="">Selecione uma Comunidade</option>
-                            @foreach($communitys as $community)
-                            <option value="{{ $community->id }}">{{ $community->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="birth_date">Data de Nascimento</label>
-                        <input type="date" class="form-control" id="birth_date" name="birth_date" placeholder="Data de Nascimento">
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="email">E-mail</label>
-                        <input type="email" class="form-control" id="email" name="email" placeholder="E-mail">
-                    </div>
-                </div>
+            <div class="col-md-4">
+                <x-adminlte-input name="middle_name" label="{{ __('Nome do Meio') }}" value="{{ old('middle_name') }}" fgroup-class="has-feedback" error-key="middle_name" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+            <div class="col-md-4">
+                <x-adminlte-input name="last_name" label="{{ __('Sobrenome') }}" value="{{ old('last_name') }}" required fgroup-class="has-feedback" error-key="last_name" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+        </div>
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <x-adminlte-input name="birth_date" label="{{ __('Data de Nascimento') }}" type="date" value="{{ old('birth_date') }}" fgroup-class="has-feedback" error-key="birth_date" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+            <div class="col-md-6">
+                <x-adminlte-select name="gender" label="{{ __('Gênero') }}" fgroup-class="has-feedback" error-key="gender" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-venus-mars"></i>
+                        </div>
+                    </x-slot>
+                    <option value="">{{ __('Selecione') }}</option>
+                    @foreach (\App\Enums\GenderEnum::cases() as $gender)
+                    <option value="{{ $gender->value }}" {{ old('gender') == $gender->value ? 'selected' : '' }}>
+                        {{ $gender->label() }}
+                    </option>
+                    @endforeach
+                </x-adminlte-select>
+            </div>
+        </div>
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <x-adminlte-input name="cpf" label="{{ __('CPF') }}" id="cpf" value="{{ old('cpf') }}" required fgroup-class="has-feedback" error-key="cpf" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-id-card"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+            <div class="col-md-3">
+                <x-adminlte-input name="rg" label="{{ __('RG') }}" id="rg" value="{{ old('rg') }}" fgroup-class="has-feedback" error-key="rg" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-id-card"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+            <div class="col-md-6">
+                <x-adminlte-select 
+                    name="community_id" 
+                    label="{{ __('Comunidade') }}" 
+                    fgroup-class="has-feedback" 
+                    error-key="community_id" 
+                    igroup-size="sm" 
+                    required
+                >
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-church"></i>
+                        </div>
+                    </x-slot>
 
-                <div class="row">
-                    <div class="form-group col-md-12">
-                        <fieldset class="border p-2">
-                            <legend class="w-auto">Dados de Contato</legend>
-                            <div class="row">
-                                <div class="form-group col-md-3">
-                                    <label for="phone">Telefone</label>
-                                    <input type="text" class="form-control" id="phone" name="phone" placeholder="Telefone">
-                                </div>
-                                <div class="form-group col-md-3">
-                                    <label for="cellphone">Celular</label>
-                                    <input type="text" class="form-control" id="cellphone" name="cellphone" placeholder="Celular">
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="form-group col-md-2">
-                                    <label for="zip_code">CEP</label>
-                                    <input type="text" class="form-control" id="cep" name="cep" placeholder="CEP">
-                                </div>
-                                <div class="form-group col-md-6">
-                                    <label for="address">Endereço</label>
-                                    <input type="text" class="form-control" id="address" name="address" placeholder="Endereço">
-                                </div>
-                                <div class="form-group col-md-4">
-                                    <label for="number">Número</label>
-                                    <input type="text" class="form-control" id="number" name="number" placeholder="Número">
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="form-group col-md-3">
-                                    <label for="complement">Complemento</label>
-                                    <input type="text" class="form-control" id="complement" name="complement" placeholder="Complemento">
-                                </div>
-                                <div class="form-group col-md-3">
-                                    <label for="district">Bairro</label>
-                                    <input type="text" class="form-control" id="district" name="district" placeholder="Bairro">
-                                </div>
-                                <div class="form-group col-md-3">
-                                    <label for="reference">Cidade</label>
-                                    <input type="text" class="form-control" id="city" name="city" placeholder="Cidade">
-                                </div>
-                                <div class="form-group col-md-3">
-                                    <label for="state">Estado</label>
-                                    <input type="text" class="form-control" id="state" name="state" placeholder="Estado">
-                                </div>
-                            </div>
-                        </fieldset>
-                        <div class="row">
-                            <div class="form-group col-md-12">
-                                <label>Observações</label>
-                                <input type="text" class="form-control" id="observations" name="observations" placeholder="Observações">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="form-group col-md-6">
-                        <label for="is_active">Situação</label><br>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="is_active" id="is_active1" value="1" checked>
-                            <label class="form-check-label" for="is_active1">Ativo</label>
-                        </div>
+                    <option value="">{{ __('Selecione uma comunidade') }}</option>
 
-                    <div class="form-group col-md-2">
-                        <label>Contribuinte</label><br>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="is_contributor" id="is_contributor1" value="1" checked>
-                            <label class="form-check-label" for="is_contributor1">Sim</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="is_contributor" id="is_contributor0" value="0">
-                            <label class="form-check-label" for="is_contributor0">Não</label>
-                        </div>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="marital_status">Estado Civil</label>
-                        <select class="form-control" id="marital_status" name="marital_status">
-                            @foreach(\App\Enums\MaritalStatusEnum::cases() as $status)
-                            <option value="{{ $status->value() }}">{{ $status->label() }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="form-group col-md-12">
-                        <fieldset class="border p-2">
-                            <legend class="w-auto">Filiação</legend>
-                            <div class="row">
-                                <div class="form-group col-md-6">
-                                    <label for="father_name">Nome do Pai</label>
-                                    <input type="text" class="form-control" id="father_name" name="father_name" placeholder="Nome do Pai">
-                                </div>
-                                <div class="form-group col-md-6">
-                                    <label for="mother_name">Nome da Mãe</label>
-                                    <input type="text" class="form-control" id="mother_name" name="mother_name" placeholder="Nome da Mãe">
-                                </div>
-                            </div>
-                        </fieldset>
-                    </div>
-                </div>
+                    @foreach ($communities as $community)
+                        <option value="{{ $community->id }}" 
+                                {{ old('community_id') == $community->id ? 'selected' : '' }}>
+                            {{ $community->name }}
+                        </option>
+                    @endforeach
+                </x-adminlte-select>
+            </div>
+        </div>
 
-                <div class="row">
-                    <div class="form-group col-md-12">
-                        <fieldset class="border p-2">
-                            <legend class="w-auto">Contribuição Mensal</legend>
-                            <div class="row">
-                                <div class="form-group col-md-3">
-                                    <label for="delivery_method">Método de Envio</label>
-                                    <select class="form-control" id="delivery_method" name="delivery_method">
-                                        @foreach (\App\Enums\DeliveryMethodEnum::cases() as $method)
-                                        <option value="{{ $method->value() }}">{{ $method->label() }} </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="form-group col-md-3">
-                                    <label for="delivery_method">Método de Pagamento</label>
-                                    <select id="payment_method" name="payment_method" class="form-control" required>
-                                        <option value="">{{ __('Selecione a Forma de Pagamento') }}</option>
-                                        <option value="pix" {{ old('payment_method') == 'pix' ? 'selected' : '' }}>{{ __('Pix') }}</option>
-                                        <option value="creditcard" {{ old('payment_method') == 'creditcard' ? 'selected' : '' }}>{{ __('Cartão de Crédito') }}</option>
-                                        <option value="bankslip" {{ old('payment_method') == 'bankslip' ? 'selected' : '' }}>{{ __('Boleto Bancário') }}</option>
-                                    </select>
-                                </div>
-                                <div class="form-group col-md-3">
-                                    <label for="day">Dia do Mês</label>
-                                    <input type="number" class="form-control" id="due_day" name="due_day" min="1" max="31" step="1" placeholder="1 a 31" required>
-                                </div>
-                                <div class="form-group col-md">
-                                    <label>Valor</label>
-                                    <input type="text" class="form-control" id="amount" name="amount" placeholder="R$ 0,00">
-                                </div>
-                            </div>
-                        </fieldset>
-                    </div>
-                </div>
-                <div class="card-footer text-left">
-                    <button type="submit" class="btn btn-primary">Salvar</button>
-                    <a href="{{ route('admin.members.index') }}" class="btn btn-secondary">Voltar</a>
-                </div>
+        <h5 class="mb-3">{{ __('Dados de Contato') }}</h5>
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <x-adminlte-input name="phone" label="{{ __('Telefone') }}" id="phone" value="{{ old('phone') }}" fgroup-class="has-feedback" error-key="phone" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+            <div class="col-md-4">
+                <x-adminlte-input name="cellphone" label="{{ __('Celular') }}" id="cellphone" value="{{ old('cellphone') }}" fgroup-class="has-feedback" error-key="cellphone" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+            <div class="col-md-4">
+                <x-adminlte-input name="email" label="{{ __('E-mail') }}" type="email" value="{{ old('email') }}" fgroup-class="has-feedback" error-key="email" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+        </div>
+
+        <h5 class="mb-3">{{ __('Endereço') }}</h5>
+        <div class="row mb-4">
+            <div class="col-md-2">
+                <x-adminlte-input name="cep" label="{{ __('CEP') }}" id="cep" value="{{ old('cep') }}" fgroup-class="has-feedback" error-key="cep" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+            <div class="col-md-8">
+                <x-adminlte-input name="address" label="{{ __('Endereço') }}" value="{{ old('address') }}" fgroup-class="has-feedback" error-key="address" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-road"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+            <div class="col-md-2">
+                <x-adminlte-input name="number" label="{{ __('Número') }}" value="{{ old('number') }}" fgroup-class="has-feedback" error-key="number" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-home"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+        </div>
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <x-adminlte-input name="complement" label="{{ __('Complemento') }}" value="{{ old('complement') }}" fgroup-class="has-feedback" error-key="complement" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+            <div class="col-md-3">
+                <x-adminlte-input name="district" label="{{ __('Bairro') }}" value="{{ old('district') }}" fgroup-class="has-feedback" error-key="district" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-map"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+            <div class="col-md-4">
+                <x-adminlte-input name="city" label="{{ __('Cidade') }}" value="{{ old('city') }}" fgroup-class="has-feedback" error-key="city" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-city"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+            <div class="col-md-2">
+                <x-adminlte-input name="state" label="{{ __('Estado') }}" value="{{ old('state') }}" fgroup-class="has-feedback" error-key="state" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-flag"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+        </div>
+
+        <h5 class="mb-3">{{ __('Outras Informações') }}</h5>
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <x-adminlte-select name="marital_status" label="{{ __('Estado Civil') }}" fgroup-class="has-feedback" error-key="marital_status" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-ring"></i>
+                        </div>
+                    </x-slot>
+                    <option value="">{{ __('Selecione') }}</option>
+                    @foreach (\App\Enums\MaritalStatusEnum::cases() as $status)
+                    <option value="{{ $status->value }}" {{ old('marital_status') == $status->value ? 'selected' : '' }}>
+                        {{ $status->label() }}
+                    </option>
+                    @endforeach
+                </x-adminlte-select>
+            </div>
+            <div class="col-md-4">
+                <x-adminlte-select name="is_active" label="{{ __('Situação') }}" fgroup-class="has-feedback" error-key="is_active" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-toggle-on"></i>
+                        </div>
+                    </x-slot>
+                    <option value="1" {{ old('is_active', 1) == 1 ? 'selected' : '' }}>{{ __('Ativo') }}</option>
+                    <option value="0" {{ old('is_active', 1) == 0 ? 'selected' : '' }}>{{ __('Inativo') }}</option>
+                </x-adminlte-select>
+            </div>
+            <div class="col-md-4">
+                <x-adminlte-select name="is_contributor" label="{{ __('Contribuinte') }}" fgroup-class="has-feedback" error-key="is_contributor" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-hand-holding-usd"></i>
+                        </div>
+                    </x-slot>
+                    <option value="1" {{ old('is_contributor', 1) == 1 ? 'selected' : '' }}>{{ __('Sim') }}</option>
+                    <option value="0" {{ old('is_contributor', 1) == 0 ? 'selected' : '' }}>{{ __('Não') }}</option>
+                </x-adminlte-select>
+            </div>
+        </div>
+
+        <h5 class="mb-3">{{ __('Filiação') }}</h5>
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <x-adminlte-input name="father_name" label="{{ __('Nome do Pai') }}" value="{{ old('father_name') }}" fgroup-class="has-feedback" error-key="father_name" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-male"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+            <div class="col-md-6">
+                <x-adminlte-input name="mother_name" label="{{ __('Nome da Mãe') }}" value="{{ old('mother_name') }}" fgroup-class="has-feedback" error-key="mother_name" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-female"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+        </div>
+
+        <h5 class="mb-3">{{ __('Contribuição Mensal') }}</h5>
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <x-adminlte-select name="delivery_method" label="{{ __('Método de Envio') }}" fgroup-class="has-feedback" error-key="delivery_method" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                    </x-slot>
+                    <option value="">{{ __('Selecione') }}</option>
+                    @foreach (\App\Enums\DeliveryMethodEnum::cases() as $method)
+                    <option value="{{ $method->value }}" {{ old('delivery_method', 'online') == $method->value ? 'selected' : '' }}>
+                        {{ $method->label() }}
+                    </option>
+                    @endforeach
+                </x-adminlte-select>
+            </div>
+            <div class="col-md-3">
+                <x-adminlte-select name="payment_method" label="{{ __('Método de Pagamento') }}" fgroup-class="has-feedback" error-key="payment_method" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-credit-card"></i>
+                        </div>
+                    </x-slot>
+                    <option value="">{{ __('Selecione') }}</option>
+                    @foreach (\App\Enums\PaymentMethodEnum::cases() as $method)
+                    <option value="{{ $method->value }}" {{ old('payment_method') == $method->value ? 'selected' : '' }}>
+                        {{ $method->label() }}
+                    </option>
+                    @endforeach
+                </x-adminlte-select>
+            </div>
+            <div class="col-md-2">
+                <x-adminlte-input name="due_day" label="{{ __('Dia do Mês') }}" type="number" value="{{ old('due_day', 5) }}" min="1" max="31" step="1" required fgroup-class="has-feedback" error-key="due_day" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-calendar-day"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+            <div class="col-md-4">
+                <x-adminlte-input name="amount" label="{{ __('Valor') }}" id="amount" value="{{ old('amount', '0,00') }}" fgroup-class="has-feedback" error-key="amount" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            R$
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <x-adminlte-textarea name="observations" label="{{ __('Observações') }}" value="{{ old('observations') }}" fgroup-class="has-feedback" error-key="observations" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-comment"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-textarea>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <x-adminlte-button type="submit" theme="primary" label="{{ __('Salvar') }}" icon="fas fa-save" class="btn-lg mr-2" />
+                <x-adminlte-button theme="secondary" label="{{ __('Voltar') }}" icon="fas fa-arrow-left" class="btn-lg" onclick="window.location='{{ route('admin.members.index') }}'" />
             </div>
         </div>
     </form>
-</div>
-@stop
+</x-adminlte-card>
+@endsection
 
 @section('js')
-@parent
-
-{{-- jQuery Mask Plugin --}}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
-
+<script src="https://unpkg.com/imask@7/dist/imask.min.js"></script>
 <script>
     $(document).ready(function() {
-        $('#cellphone').mask('(00) 0 0000-0000');
-        $('#phone').mask('(00) 0000-0000');
-        $('#cep').mask('00000-000');
-        $('#rg').mask('00.000.000-00');
+        // Máscaras para os campos
         $('#cpf').mask('000.000.000-00');
+        $('#cep').mask('00000-000');
+        $('#phone').mask('(00) 0000-0000');
+        $('#cellphone').mask('(00) 0 0000-0000');
+        $('#rg').mask('00.000.000-00');
 
+        // Busca de CEP
         $('#cep').on('blur', function() {
             var cep = $(this).val().replace(/\D/g, '');
-
             if (cep.length === 8) {
                 $.getJSON('https://viacep.com.br/ws/' + cep + '/json/', function(data) {
                     if (!data.erro) {
@@ -237,23 +409,33 @@
                 });
             }
         });
-    });
 
-</script>
-<script src="https://unpkg.com/imask"></script>
-<script>
-    IMask(document.getElementById('amount'), {
-        mask: 'R$ num'
-        , blocks: {
-            num: {
-                mask: Number
-                , thousandsSeparator: '.'
-                , radix: ','
-                , scale: 2
-                , padFractionalZeros: true
-            , }
-        }
-    });
+        // Máscara para o campo amount
+        const amountInput = document.getElementById('amount');
+        const amountMask = IMask(amountInput, {
+            mask: 'R$ num',
+            blocks: {
+                num: {
+                    mask: Number,
+                    thousandsSeparator: '.',
+                    radix: ',',
+                    scale: 2,
+                    padFractionalZeros: true,
+                    normalizeZeros: true,
+                    min: 0
+                }
+            }
+        });
 
+        // Sanitizar os dados antes do envio
+        $('#memberForm').on('submit', function(e) {
+            $('#cpf').val($('#cpf').val().replace(/\D/g, ''));
+            $('#cep').val($('#cep').val().replace(/\D/g, ''));
+            $('#phone').val($('#phone').val().replace(/\D/g, ''));
+            $('#cellphone').val($('#cellphone').val().replace(/\D/g, ''));
+            $('#rg').val($('#rg').val().replace(/\D/g, ''));
+            $('#amount').val(amountMask.unmaskedValue.replace(',', '.'));
+        });
+    });
 </script>
 @endsection

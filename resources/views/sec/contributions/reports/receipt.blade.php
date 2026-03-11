@@ -129,7 +129,7 @@
         <div class="receipt-details">
             <p>Recebemos em {{ $contribution->contribution_date->format('d/m/Y') }}, de <span>{{ $contribution->member->name }}</span></p>
             <p>a importância de R$ <span>{{ number_format($contribution->amount, 2, ',', '.') }} ({{ $valorPorExtenso }})</span></p>
-            <p>proveniente de <span>Contribuição mensal no período de - {{ $contribution->period }}</span></p>
+            <p>proveniente de <span>Contribuição mensal no período de {{ $contribution->period }}</span></p>
         </div>
 
         <div class="footer">

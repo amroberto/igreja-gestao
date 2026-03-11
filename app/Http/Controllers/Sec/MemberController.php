@@ -210,9 +210,78 @@ class MemberController extends Controller
      * @param Member $member
      * @return RedirectResponse
      */
-    public function update(UpdateMemberRequest $request, Member $member): RedirectResponse
+    public function update(UpdateMemberRequest $request, Member $member, AsaasCustomerService $asaas): RedirectResponse
     {
         $member->update($request->validated());
+
+        // verifica se o membro tem um ID do Asaas para atualizar os dados lá também
+        if ($member->member_asaas_id) {
+            try {
+                $asaasPayload = [
+                    'name' => trim($member->first_name . ' ' . $member->middle_name . ' ' . $member->last_name),
+                    'cpfCnpj' => $member->cpf,
+                    'email' => $member->email,
+                    'phone' => $member->phone,
+                    'mobilePhone' => $member->cellphone,
+                    'address' => $member->address,
+                    'addressNumber' => $member->number,
+                    'complement' => $member->complement,
+                    'province' => $member->district,
+                    'postalCode' => $member->cep,
+                ];
+
+                $asaas->updateCustomer($member->member_asaas_id, $asaasPayload);
+            } catch (\Exception $e) {
+                Log::error('Erro ao atualizar cliente no Asaas ao atualizar membro.', ['member_id' => $member->id, 'erro' => $e->getMessage()]);
+            }
+        }
+
+        // se member_asaas_id estiver vazio, verifica se existe cadastrado pelo cpf
+        if (!$member->member_asaas_id) {
+            $existingMember = Member::where('cpf', $member->cpf)->whereNotNull('member_asaas_id')->first();
+            if ($existingMember) {
+                try {
+                    $asaas->updateCustomer($existingMember->member_asaas_id, [
+                        'name' => trim($member->first_name . ' ' . $member->middle_name . ' ' . $member->last_name),
+                        'cpfCnpj' => $member->cpf,
+                        'email' => $member->email,
+                        'phone' => $member->phone,
+                        'mobilePhone' => $member->cellphone,
+                        'address' => $member->address,
+                        'addressNumber' => $member->number,
+                        'complement' => $member->complement,
+                        'province' => $member->district,
+                        'postalCode' => $member->cep,
+                    ]);
+                    $member->member_asaas_id = $existingMember->member_asaas_id;
+                    $member->save();
+                } catch (\Exception $e) {
+                    Log::error('Erro ao atualizar cliente Asaas existente ao atualizar membro.', ['member_id' => $member->id, 'erro' => $e->getMessage()]);
+                }
+            }
+        }
+
+        // se não houver member_asaas_id e não cadastrado pelo cpf, faz um novo cadastro no asaas e salva em member_asaas_id
+        if (!$member->member_asaas_id) {
+            try {
+                $asaasCustomer = $asaas->createCustomer([
+                    'name' => trim($member->first_name . ' ' . $member->middle_name . ' ' . $member->last_name),
+                    'cpfCnpj' => $member->cpf,
+                    'email' => $member->email,
+                    'phone' => $member->phone,
+                    'mobilePhone' => $member->cellphone,
+                    'address' => $member->address,
+                    'addressNumber' => $member->number,
+                    'complement' => $member->complement,
+                    'province' => $member->district,
+                    'postalCode' => $member->cep,
+                ]);
+                $member->member_asaas_id = $asaasCustomer['id'] ?? null;
+                $member->save();
+            } catch (\Exception $e) {
+                Log::error('Erro ao criar cliente no Asaas ao atualizar membro.', ['member_id' => $member->id, 'erro' => $e->getMessage()]);
+            }
+        }
 
         return redirect()->route('sec.members.index')->with('success', __('Membro atualizado com sucesso!'));
     }
