@@ -59,7 +59,7 @@
         <!-- Gráficos -->
         <div class="mt-4 row">
             <div class="col-md-6">
-                <x-adminlte-card title="{{ __('Contribuições por Mês - :year', ['year' => $year ?? now()->year]) }}"
+                <x-adminlte-card title="{{ __('Contribuições por Mês - :year', ['year' => now()->year]) }}"
                     theme="secondary" collapsible>
                     <canvas id="contribuicoesChart" height="200"></canvas>
                 </x-adminlte-card>
@@ -67,6 +67,16 @@
             <div class="col-md-6">
                 <x-adminlte-card title="{{ __('Membros por Faixa Etária') }}" theme="secondary" collapsible>
                     <canvas id="faixaEtariaChart" height="200"></canvas>
+                </x-adminlte-card>
+            </div>
+
+            <!-- Novo gráfico: Contribuições por Comunidade -->
+            <div class="mt-4 col-md-12">
+                <x-adminlte-card title="{{ __('Contribuições por Comunidade – :year', ['year' => now()->year]) }}"
+                    theme="secondary" collapsible>
+                    <div style="position: relative; height: 380px;">
+                        <canvas id="contribPorComunidadeChart"></canvas>
+                    </div>
                 </x-adminlte-card>
             </div>
         </div>
@@ -77,115 +87,180 @@
 
 @section('plugins.Chartjs', true)
 
-
 @section('js')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js">
-</script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
 <script>
     // Registrar o plugin DataLabels
-        Chart.register(ChartDataLabels);
+    Chart.register(ChartDataLabels);
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Gráfico de Contribuições (inalterado)
-            new Chart(document.getElementById('contribuicoesChart'), {
-                type: 'bar',
-                data: {
-                    labels: @json($contribuicoesPorMes['labels']),
-                    datasets: [{
-                        label: '{{ __('Contribuições') }}',
-                        data: @json($contribuicoesPorMes['data']),
-                        backgroundColor: 'rgba(0, 123, 255, 0.6)',
-                        borderColor: 'rgba(0, 123, 255, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: '{{ __('Valor (R$)') }}'
-                            }
+    document.addEventListener('DOMContentLoaded', function () {
+
+        // Gráfico de Contribuições (inalterado)
+        new Chart(document.getElementById('contribuicoesChart'), {
+            type: 'bar',
+            data: {
+                labels: @json($contribuicoesPorMes['labels']),
+                datasets: [{
+                    label: '{{ __('Contribuições') }}',
+                    data: @json($contribuicoesPorMes['data']),
+                    backgroundColor: 'rgba(0, 123, 255, 0.6)',
+                    borderColor: 'rgba(0, 123, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '{{ __('Valor (R$)') }}'
                         }
-                    },
-                    plugins: {
-                        datalabels: {
-                            anchor: 'end',
-                            align: 'top',
-                            formatter: (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-                            color: '#000',
-                            font: {
-                                weight: 'bold'
-                            }
+                    }
+                },
+                plugins: {
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                        color: '#000',
+                        font: {
+                            weight: 'bold'
                         }
                     }
                 }
-            });
-
-            // Gráfico de Membros por Faixa Etária (barras horizontais)
-            new Chart(document.getElementById('faixaEtariaChart'), {
-                type: 'bar',
-                data: {
-                    labels: @json($membrosPorFaixaEtaria['labels']),
-                    datasets: [{
-                        label: '{{ __('Membros') }}',  // ← pode até remover essa linha se quiser
-                        data: @json($membrosPorFaixaEtaria['data']),
-                        backgroundColor: [
-                            'rgba(255, 65, 105, 0.6)',
-                            'rgba(0, 150, 200, 0.6)',
-                            'rgba(255, 180, 0, 0.6)',
-                            'rgba(0, 180, 120, 0.6)',
-                            'rgba(150, 100, 255, 0.6)',
-                            'rgba(255, 140, 0, 0.6)',
-                            'rgba(128, 128, 128, 0.6)'
-                        ],
-                        borderColor: [
-                            'rgba(255, 65, 105, 1)',
-                            'rgba(0, 150, 200, 1)',
-                            'rgba(255, 180, 0, 1)',
-                            'rgba(0, 180, 120, 1)',
-                            'rgba(150, 100, 255, 1)',
-                            'rgba(255, 140, 0, 1)',
-                            'rgba(128, 128, 128, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    indexAxis: 'y', // barras horizontais
-                    scales: {
-                        x: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: '{{ __('Quantidade de Membros') }}'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: '{{ __('Faixa Etária') }}'
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: false  // ← ESSA É A LINHA QUE REMOVE A LEGENDA
-                        },
-                        datalabels: {
-                            anchor: 'end',
-                            align: 'end',
-                            formatter: (value) => value,
-                            color: '#000',
-                            font: {
-                                weight: 'bold'
-                            }
-                        }
-                    }
-                }
-            });
+            }
         });
+
+        // Gráfico de Membros por Faixa Etária (barras horizontais)
+        new Chart(document.getElementById('faixaEtariaChart'), {
+            type: 'bar',
+            data: {
+                labels: @json($membrosPorFaixaEtaria['labels']),
+                datasets: [{
+                    label: '{{ __('Membros') }}',
+                    data: @json($membrosPorFaixaEtaria['data']),
+                    backgroundColor: [
+                        'rgba(255, 65, 105, 0.6)',
+                        'rgba(0, 150, 200, 0.6)',
+                        'rgba(255, 180, 0, 0.6)',
+                        'rgba(0, 180, 120, 0.6)',
+                        'rgba(150, 100, 255, 0.6)',
+                        'rgba(255, 140, 0, 0.6)',
+                        'rgba(128, 128, 128, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 65, 105, 1)',
+                        'rgba(0, 150, 200, 1)',
+                        'rgba(255, 180, 0, 1)',
+                        'rgba(0, 180, 120, 1)',
+                        'rgba(150, 100, 255, 1)',
+                        'rgba(255, 140, 0, 1)',
+                        'rgba(128, 128, 128, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '{{ __('Quantidade de Membros') }}'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: '{{ __('Faixa Etária') }}'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'end',
+                        formatter: (value) => value,
+                        color: '#000',
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Novo: Gráfico de Contribuições por Comunidade (linhas)
+        new Chart(document.getElementById('contribPorComunidadeChart'), {
+            type: 'line',
+            data: {
+                labels: @json($contribPorComunidadePorMes['labels']),
+                datasets: @json($contribPorComunidadePorMes['datasets'])
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '{{ __('Valor (R$)') }}'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return 'R$ ' + value.toLocaleString('pt-BR', { minimumFractionDigits: 0 });
+                            }
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: '{{ __('Mês') }}'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            boxWidth: 12,
+                            usePointStyle: true,
+                            padding: 16
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += 'R$ ' + context.parsed.y.toLocaleString('pt-BR', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                });
+                                return label;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        display: false  // normalmente não fica bom em gráficos de múltiplas linhas
+                    }
+                }
+            }
+        });
+    });
 </script>
 @stop
