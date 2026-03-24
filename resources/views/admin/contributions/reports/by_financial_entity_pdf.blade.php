@@ -6,8 +6,8 @@
     <style>
         body {
             font-family: Helvetica, sans-serif;
-            font-size: 10px;
-            margin: 15px;
+            font-size: 8px;
+            margin: 12px;
         }
 
         table {
@@ -62,7 +62,6 @@
 
     <h3 class="text-center">{{ __('Relatório de Contribuições por Entidade Financeira - ') }} {{ $financialEntity->name }}</h3>
     <p class="text-center">{{ __('Período: ') }} {{ Carbon\Carbon::parse($request->start_date)->format('d/m/Y') }} {{ __('a') }} {{ Carbon\Carbon::parse($request->end_date)->format('d/m/Y') }}</p>
-    <p>{{ __('Gerado por: ') }} {{ $generatedBy }} {{ __('em') }} {{ $date }}</p>
 
     <!-- Tabela de Contribuições -->
     <table>
@@ -71,7 +70,7 @@
                 <th>{{ __('Doc.') }}</th>
                 <th>{{ __('Data') }}</th>
                 <th>{{ __('Ent. Financeira') }}</th>
-                <th>{{ __('Cod. Membro') }}</th>
+                <th>{{ __('Código') }}</th>
                 <th>{{ __('Nome') }}</th>
                 <th>{{ __('Período') }}</th>
                 <th>{{ __('Meses Pagos') }}</th>
@@ -118,7 +117,7 @@
 
     <!-- Rodapé -->
     <div class="footer">
-        <p>{{ __('Página') }} <span class="page-number"></span> {{ __('de') }} <span class="total-pages"></span></p>
+        <p>{{ __('Relatório gerado por ') }} {{ $generatedBy }} {{ __('em') }} {{ $date }}</p>
     </div>
 </body>
 </html>

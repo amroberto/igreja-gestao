@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Member;
+use App\Exports\ContributionsByFinancialEntityExport;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\ContributionsByCommunityExport;
 use App\Models\Community;
 use App\Models\Contribution;
 use Illuminate\Http\Request;
@@ -15,6 +18,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
 use NumberToWords\NumberToWords;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class ContributionController extends Controller
 {
@@ -242,130 +247,93 @@ class ContributionController extends Controller
 
     public function reportByFinancialEntity()
     {
-        $communityId = Auth::user()->community_id;
-        if (!$communityId) {
-            return redirect()->back()->with('error', 'Usuário não está associado a uma comunidade.');
-        }
-
-        $financialEntities = FinancialEntity::where('community_id', $communityId)
-            ->orderBy('name')
+        $financialEntities = FinancialEntity::orderBy('name')
             ->select('id', 'name')
             ->get();
 
         return view('admin.contributions.reports.by_financial_entity', compact('financialEntities'));
     }
 
+    // ====================== RELATÓRIO POR ENTIDADE FINANCEIRA ======================
     public function generateReportByFinancialEntity(Request $request)
     {
         $request->validate([
-            'financial_entity_id' => [
-                'required',
-                'exists:financial_entities,id',
-                function ($attribute, $value, $fail) use ($request) {
-                    $communityId = Auth::user()->community_id;
-                    if (!FinancialEntity::where('id', $value)->where('community_id', $communityId)->exists()) {
-                        $fail('A entidade financeira selecionada é inválida.');
-                    }
-                },
-            ],
-            'start_date' => self::REQUIRED_DATE_RULE,
-            'end_date' => self::REQUIRED_DATE_RULE . '|after_or_equal:start_date',
+            'financial_entity_id' => 'required|exists:financial_entities,id',
+            'start_date' => 'required|date',
+            'end_date'   => 'required|date|after_or_equal:start_date',
         ]);
 
-        $communityId = Community::all();
-        $financialEntity = FinancialEntity::where('id', $request->financial_entity_id)
-            ->where('community_id', $communityId)
-            ->firstOrFail();
+        $format = $request->input('format', 'pdf');
 
-        $contributions = Contribution::with(['member', 'financial_entity'])
-            ->where('community_id', $communityId)
+        $financialEntity = FinancialEntity::findOrFail($request->financial_entity_id);
+
+        $contributions = Contribution::with(['member.community', 'financial_entity'])
             ->where('financial_entity_id', $request->financial_entity_id)
+            ->where('status', 'confirmed')
             ->whereBetween('contribution_date', [$request->start_date, $request->end_date])
             ->orderBy('contribution_date', 'asc')
             ->get();
 
-        // Debug para verificar $contributions
-        Log::info('Contributions data (by_financial_entity):', [
-            'count' => $contributions->count(),
-            'first_item' => $contributions->first() ? $contributions->first()->toArray() : null,
-        ]);
-
         $parochialUnion = ParochialUnion::first();
-
-        // Debug detalhado para o logo
-        Log::info('ParochialUnion data (by_financial_entity):', [
-            'parochial_union_exists' => !is_null($parochialUnion),
-            'logo' => $parochialUnion ? $parochialUnion->logo : null,
-            'storage_path' => $parochialUnion && $parochialUnion->logo ? storage_path('app/public/' . $parochialUnion->logo) : null,
-            'storage_exists' => $parochialUnion && $parochialUnion->logo ? file_exists(storage_path('app/public/' . $parochialUnion->logo)) : false,
-            'public_path' => $parochialUnion && $parochialUnion->logo ? public_path('storage/' . $parochialUnion->logo) : null,
-            'public_exists' => $parochialUnion && $parochialUnion->logo ? file_exists(public_path('storage/' . $parochialUnion->logo)) : false,
-            'public_url' => $parochialUnion && $parochialUnion->logo ? asset('storage/' . $parochialUnion->logo) : null,
-        ]);
-
-        if (!$parochialUnion) {
-            Log::warning('ParochialUnion não encontrada para o relatório por entidade financeira.');
-        }
-
         $generatedBy = Auth::user()->name;
         $date = now()->format('d/m/Y');
 
-        // Verificar se $contributions é uma coleção
-        if (!$contributions instanceof \Illuminate\Database\Eloquent\Collection) {
-            Log::error('Contributions is not a collection', ['contributions' => $contributions]);
-            return response()->json(['error' => 'Erro ao carregar contribuições'], 500);
+        if ($format === 'excel') {
+            return Excel::download(
+                new ContributionsByFinancialEntityExport($contributions, $request, $financialEntity),
+                "relatorio_contribuicoes_{$financialEntity->name}_{$request->start_date}_a_{$request->end_date}.xlsx"
+            );
         }
 
+        if ($format === 'html') {
+            return view('admin.contributions.reports.by_financial_entity_html', compact(
+                'contributions', 'financialEntity', 'parochialUnion', 'generatedBy', 'date', 'request'
+            ));
+        }
+
+        // PDF (padrão)
         $pdf = Pdf::loadView('admin.contributions.reports.by_financial_entity_pdf', compact(
-            'contributions',
-            'financialEntity',
-            'parochialUnion',
-            'generatedBy',
-            'date',
-            'request'
+            'contributions', 'financialEntity', 'parochialUnion', 'generatedBy', 'date', 'request'
         ));
 
         return $pdf->download("relatorio_contribuicoes_{$financialEntity->name}_{$request->start_date}_a_{$request->end_date}.pdf");
     }
 
-    public function reportByCommunity()
-    {
-        $communityId = Auth::user()->community_id;
-        if (!$communityId) {
-            return redirect()->back()->with('error', 'Usuário não está associado a uma comunidade.');
-        }
-
-        return view('admin.contributions.reports.by_community', compact('communityId'));
-    }
-
-    public function generateReportByCommunity(Request $request)
+    public function generateReportByPeriod(Request $request)
     {
         $request->validate([
             'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'start_date' => self::REQUIRED_DATE_RULE,
-            'end_date' => self::REQUIRED_DATE_RULE . '|after_or_equal:start_date',
+            'end_date'   => 'required|date|after_or_equal:start_date',
         ]);
-        $communityId = Auth::user()->community_id;
 
-        $contributions = Contribution::with(['member', 'financial_entity'])
-            ->where('community_id', $communityId)
+        $format = $request->input('format', 'pdf');
+
+        $contributions = Contribution::with(['member.community', 'financial_entity'])
+            ->where('status', 'confirmed')
             ->whereBetween('contribution_date', [$request->start_date, $request->end_date])
             ->orderBy('contribution_date', 'asc')
             ->get();
 
         $parochialUnion = ParochialUnion::first();
-
-        Log::info('ParochialUnion data (community report):', [
-            'exists' => !is_null($parochialUnion),
-            'logo' => $parochialUnion ? $parochialUnion->logo : null,
-            'logo_exists' => $parochialUnion && $parochialUnion->logo ? file_exists(public_path('storage/' . $parochialUnion->logo)) : false,
-        ]);
-
         $generatedBy = Auth::user()->name;
         $date = now()->format('d/m/Y');
 
-        $pdf = Pdf::loadView('admin.contributions.reports.by_community_pdf', compact(
+        if ($format === 'excel') {
+            return $this->exportToExcel($contributions, $request);
+        }
+
+        if ($format === 'html') {
+            return view('admin.contributions.reports.by_period_html', compact(
+                'contributions',
+                'parochialUnion',
+                'generatedBy',
+                'date',
+                'request'
+            ));
+        }
+
+        // Default: PDF
+        $pdf = Pdf::loadView('admin.contributions.reports.by_period_pdf', compact(
             'contributions',
             'parochialUnion',
             'generatedBy',
@@ -373,6 +341,71 @@ class ContributionController extends Controller
             'request'
         ));
 
-        return $pdf->download("relatorio_contribuicoes_comunidade_{$request->start_date}_a_{$request->end_date}.pdf");
+        $filename = "relatorio_contribuicoes_todas_comunidades_{$request->start_date}_a_{$request->end_date}.pdf";
+
+        return $pdf->download($filename);
+    }
+
+    private function exportToExcel($contributions, $request)
+    {
+        return Excel::download(
+            new \App\Exports\ContributionsByPeriodExport($contributions, $request),
+            "relatorio_contribuicoes_todas_comunidades_{$request->start_date}_a_{$request->end_date}.xlsx"
+        );
+    }
+
+    public function reportByPeriod()
+    {
+        return view('admin.contributions.reports.by_period');
+    }
+
+    public function reportByCommunity()
+    {
+        $communities = Community::all();
+        return view('admin.contributions.reports.by_community', compact('communities'));
+    }
+
+    // ====================== RELATÓRIO POR COMUNIDADE ======================
+    public function generateReportByCommunity(Request $request)
+    {
+        $request->validate([
+            'community_id' => 'required|exists:communities,id',
+            'start_date'   => 'required|date',
+            'end_date'     => 'required|date|after_or_equal:start_date',
+        ]);
+
+        $format = $request->input('format', 'pdf');
+
+        $community = Community::findOrFail($request->community_id);
+
+        $contributions = Contribution::with(['member.community', 'financial_entity'])
+            ->where('community_id', $request->community_id)
+            ->whereBetween('contribution_date', [$request->start_date, $request->end_date])
+            ->orderBy('contribution_date', 'asc')
+            ->get();
+
+        $parochialUnion = ParochialUnion::first();
+        $generatedBy = Auth::user()->name;
+        $date = now()->format('d/m/Y');
+
+        if ($format === 'excel') {
+            return Excel::download(
+                new ContributionsByCommunityExport($contributions, $request, $community),
+                "relatorio_contribuicoes_{$community->name}_{$request->start_date}_a_{$request->end_date}.xlsx"
+            );
+        }
+
+        if ($format === 'html') {
+            return view('admin.contributions.reports.by_community_html', compact(
+                'contributions', 'community', 'parochialUnion', 'generatedBy', 'date', 'request'
+            ));
+        }
+
+        // PDF
+        $pdf = Pdf::loadView('admin.contributions.reports.by_community_pdf', compact(
+            'contributions', 'community', 'parochialUnion', 'generatedBy', 'date', 'request'
+        ));
+
+        return $pdf->download("relatorio_contribuicoes_{$community->name}_{$request->start_date}_a_{$request->end_date}.pdf");
     }
 }

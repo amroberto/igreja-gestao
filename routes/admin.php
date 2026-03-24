@@ -18,7 +18,12 @@ Route::middleware(['auth', 'verified', 'access-admin-panel'])->prefix('admin')->
     Route::get('/contributions/reports/{id}/receipt', [ContributionController::class, 'generateReceipt'])->name('admin.contributions.receipt');
     Route::get('/contributions/report/by-financial-entity', [ContributionController::class, 'reportByFinancialEntity'])->name('admin.contributions.report-by-financial-entity');
     Route::post('/contributions/report/by-financial-entity', [ContributionController::class, 'generateReportByFinancialEntity'])->name('admin.contributions.generate-report-by-financial-entity');
-    Route::get('/contributions/report/by-community', [ContributionController::class, 'reportByCommunity'])->name('contributions.reportByCommunity'); 
+    Route::get('/contributions/report/by-community', [ContributionController::class, 'reportByCommunity'])->name('contributions.reportByCommunity');
+    Route::post('/contributions/report/by-community', [ContributionController::class, 'generateReportByCommunity'])->name('admin.contributions.generateReportByCommunity');
+    Route::get('/contributions/report/by-period', [ContributionController::class, 'reportByPeriod'])
+        ->name('admin.contributions.report.by.period');
+    Route::post('/contributions/report/by-period', [ContributionController::class, 'generateReportByPeriod'])
+        ->name('admin.contributions.report.by.period.generate');
     Route::resource('communities', CommunityController::class)->names('admin.communities');
     Route::resource('parishes', ParishController::class)->names('admin.parishes');
     Route::resource('users', UserController::class)->names('admin.users');
@@ -26,7 +31,7 @@ Route::middleware(['auth', 'verified', 'access-admin-panel'])->prefix('admin')->
     Route::resource('contributions', ContributionController::class)->names('admin.contributions');
     Route::get('/admin/members/autocomplete', [MemberController::class, 'autocomplete'])->name('admin.members.autocomplete');
     Route::get('/members/{member}/pdf', [MemberController::class, 'pdf'])->name('admin.members.pdf');
-    Route::resource('/revenue-ordinary-categories',RevenueOrdinaryCategoryController::class)->names('admin.revenue-ordinary-categories');
+    Route::resource('/revenue-ordinary-categories', RevenueOrdinaryCategoryController::class)->names('admin.revenue-ordinary-categories');
 
     // Rotas para edição da união paroquial
     Route::get('/parochial-union/edit', [ParochialUnionController::class, 'edit'])->name('admin.parochial-union.edit');

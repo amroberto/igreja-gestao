@@ -452,11 +452,29 @@ return [
                     'can' => 'access-sec-panel',
                 ],
                 [
+                    'text' => 'Contrib. por Entidade Financeira',
+                    'url'  => 'admin/contributions/report/by-financial-entity',
+                    'icon' => 'fas fa-file-pdf',
+                    'can' => 'access-admin-panel',
+                ],
+                [
                     'text' => 'Contribuições por Comunidade',
                     'url'  => 'sec/contributions/report/by-community',
                     'icon' => 'fas fa-file-pdf',
                     'can' => 'access-sec-panel',
                 ],
+                [
+                    'text' => 'Contribuições por Comunidade',
+                    'url'  => 'admin/contributions/report/by-community',
+                    'icon' => 'fas fa-file-pdf',
+                    'can' => 'access-admin-panel',
+                ],
+                [
+                    'text' => 'Contribuições por Período',
+                    'url'  => 'admin/contributions/report/by-period',
+                    'icon' => 'fas fa-file-pdf',
+                    'can' => 'access-admin-panel',
+                ]
             ]
         ],
         // Link para o Painel de Membros (acessível a todos)
