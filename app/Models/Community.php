@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Parish;
-use App\Models\UserCommunity;
 use App\Models\FinancialEntity;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Member;
+use App\Models\Parish;
+use App\Models\User;
+use App\Models\UserCommunity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Community extends Model
 {
@@ -54,5 +55,10 @@ class Community extends Model
         return $this->belongsToMany(User::class, 'user_community')
                     ->using(UserCommunity::class)
                     ->withTimestamps();
+    }
+
+    public function members(): HasMany
+    {
+        return $this->hasMany(Member::class, 'community_id');
     }
 }

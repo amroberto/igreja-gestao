@@ -24,10 +24,16 @@ class Parish extends Model
         'cellphone',
         'email',
         'website',
-        'logo'
+        'logo',
+        'pix_key',
+        'pix_key_type',
+        'pix_receiver_name',
+        'pix_city',
+        'pix_static_enabled',
     ];
 
     protected $casts = [
+        'pix_static_enabled' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

@@ -47,6 +47,11 @@ class ParishController extends Controller
             'city' => ['nullable', 'string', 'max:100'],
             'state' => ['nullable', 'string', 'max:2'],
             'logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
+            'pix_static_enabled' => ['nullable', 'boolean'],
+            'pix_key_type' => ['nullable', 'in:cnpj,cpf,email,phone,random'],
+            'pix_key' => ['nullable', 'string', 'max:100', 'required_if:pix_static_enabled,1'],
+            'pix_receiver_name' => ['nullable', 'string', 'max:25', 'required_if:pix_static_enabled,1'],
+            'pix_city' => ['nullable', 'string', 'max:15', 'required_if:pix_static_enabled,1'],
         ]);
 
         if ($request->hasFile('logo')) {
@@ -114,6 +119,11 @@ class ParishController extends Controller
             'cellphone' => 'nullable|string|max:15',
             'cep' => 'nullable|string|max:8',
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'pix_static_enabled' => ['nullable', 'boolean'],
+            'pix_key_type' => ['nullable', 'in:cnpj,cpf,email,phone,random'],
+            'pix_key' => ['nullable', 'string', 'max:100', 'required_if:pix_static_enabled,1'],
+            'pix_receiver_name' => ['nullable', 'string', 'max:25', 'required_if:pix_static_enabled,1'],
+            'pix_city' => ['nullable', 'string', 'max:15', 'required_if:pix_static_enabled,1'],
         ])->validate();
 
         // Preenche os campos normalmente, exceto 'logo'

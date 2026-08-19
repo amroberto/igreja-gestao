@@ -15,7 +15,7 @@
                 <button onclick="window.print()" class="btn btn-light btn-sm">
                     <i class="fas fa-print"></i> Imprimir
                 </button>
-                <a href="{{ route('admin.contributions.report.by.period') }}" class="btn btn-light btn-sm">
+                <a href="{{ route('contributions.report.by.period') }}" class="btn btn-light btn-sm">
                     <i class="fas fa-arrow-left"></i> Voltar
                 </a>
             </div>
@@ -81,7 +81,7 @@
                 @if ($contributions->isNotEmpty())
                 <tfoot class="table-secondary fw-bold">
                     <tr>
-                        <td colspan="5" class="text-end">TOTAL GERAL</td>
+                        <td colspan="" class="text-end">TOTAL GERAL</td>
                         <td class="text-end">R$ {{ number_format($contributions->sum('amount'), 2, ',', '.') }}</td>
                     </tr>
                 </tfoot>

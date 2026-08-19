@@ -43,7 +43,17 @@
 
         <h5 class="mb-3">{{ __('Informações Pessoais') }}</h5>
         <div class="mb-4 row">
-            <div class="col-md-4">
+            {{-- div ID --}}
+            <div class="col-md-2">
+                <x-adminlte-input name="id" label="{{ __('ID') }}" value="{{ $member->id }}" disabled fgroup-class="has-feedback" igroup-size="sm">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text">
+                            <i class="fas fa-id-badge"></i>
+                        </div>
+                    </x-slot>
+                </x-adminlte-input>
+            </div>
+            <div class="col-md-3">
                 <x-adminlte-input name="first_name" label="{{ __('Primeiro Nome') }}" value="{{ $member->first_name ?? old('first_name') }}" required fgroup-class="has-feedback" error-key="first_name" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
@@ -52,7 +62,7 @@
                     </x-slot>
                 </x-adminlte-input>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <x-adminlte-input name="middle_name" label="{{ __('Nome do Meio') }}" value="{{ $member->middle_name ?? old('middle_name') }}" fgroup-class="has-feedback" error-key="middle_name" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
@@ -73,7 +83,7 @@
         </div>
 
         <div class="mb-4 row">
-            <div class="col-md-6">
+            <div class="col-md-3">
                 <x-adminlte-input name="birth_date" label="{{ __('Data de Nascimento') }}" type="date" value="{{ $member->birth_date ? $member->birth_date->format('Y-m-d') : old('birth_date') }}" fgroup-class="has-feedback" error-key="birth_date" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
@@ -82,7 +92,7 @@
                     </x-slot>
                 </x-adminlte-input>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-3">
                 <x-adminlte-select name="gender" label="{{ __('Gênero') }}" fgroup-class="has-feedback" error-key="gender" igroup-size="sm">
                     <x-slot name="prependSlot">
                         <div class="input-group-text">
@@ -97,9 +107,6 @@
                     @endforeach
                 </x-adminlte-select>
             </div>
-        </div>
-
-        <div class="mb-4 row">
             <div class="col-md-3">
                 <x-adminlte-input name="cpf" label="{{ __('CPF') }}" id="cpf" value="{{ $member->cpf ?? old('cpf') }}" required fgroup-class="has-feedback" error-key="cpf" igroup-size="sm">
                     <x-slot name="prependSlot">
@@ -118,6 +125,9 @@
                     </x-slot>
                 </x-adminlte-input>
             </div>
+        </div>
+
+        <div class="mb-4 row">
             <div class="col-md-6">
                 <x-adminlte-select 
                     name="community_id" 

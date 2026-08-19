@@ -1,256 +1,429 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
-    <title>Visualização de Configuração Mensal</title>
+    <title>Informativo Mensal</title>
+
     <style>
+        @page {
+            margin: 20px 25px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 12pt;
-            line-height: 1.4;
-            margin: 20px;
+            color: #273238;
+            font-family: DejaVu Sans, Arial, Helvetica, sans-serif;
+            font-size: 10px;
+            line-height: 1.45;
+            margin: 0;
         }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
+        .header-table,
+        .content-table,
+        .footer-table {
+            border-collapse: collapse;
+            width: 100%;
         }
 
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
+        .header-table td {
+            vertical-align: middle;
         }
 
-        .header .logo {
-            width: 80px;
-            height: auto;
-        }
-
-        .header .union-info, .header .parish-info {
-            flex: 1;
+        .logo-cell {
             text-align: center;
-            font-size: 10pt;
-            margin: 0 10px;
+            width: 14%;
         }
 
-        .header .union-info h1, .header .parish-info h2 {
-            font-size: 14pt;
-            margin: 5px 0;
+        .logo {
+            max-height: 65px;
+            max-width: 65px;
         }
 
-        .header p {
-            margin: 2px 0;
+        .union-cell,
+        .parish-cell {
+            text-align: center;
+            width: 36%;
+        }
+
+        .union-name {
+            color: #174a3a;
+            font-size: 13px;
+            font-weight: bold;
+            margin: 0 0 4px;
+            text-transform: uppercase;
+        }
+
+        .parish-name {
+            color: #174a3a;
+            font-size: 11px;
+            font-weight: bold;
+            margin: 0 0 4px;
+            text-transform: uppercase;
+        }
+
+        .small-text {
+            font-size: 8px;
+            line-height: 1.35;
+            margin: 1px 0;
+        }
+
+        .divider {
+            background: #c79a3b;
+            height: 3px;
+            margin: 12px 0;
         }
 
         .motto {
+            background: #f4f7f3;
+            border-left: 4px solid #174a3a;
+            color: #174a3a;
+            font-size: 11px;
             font-style: italic;
+            margin: 12px 0;
+            padding: 10px 14px;
             text-align: center;
-            margin: 20px 0;
-            font-size: 12pt;
         }
 
-        .content {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
+        .mailing-address {
+            background: #ffffff;
+            border: 1px solid #555555;
+            font-size: 11px;
+            margin: 12px 0;
+            min-height: 85px;
+            padding: 12px 16px;
+            text-align: center;
         }
 
-        .content .observations {
-            flex: 0 0 48%;
-            font-size: 10pt;
+        .mailing-address p {
+            line-height: 1.35;
+            margin: 0;
         }
 
-        .content .observations img {
-            max-width: 100%;
+        .recipient-name {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 4px !important;
+        }
+
+        .section-title {
+            background: #174a3a;
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: bold;
+            letter-spacing: 0.3px;
+            margin: 12px 0 0;
+            padding: 7px 10px;
+            text-transform: uppercase;
+        }
+
+        .content-table {
+            margin-bottom: 12px;
+        }
+
+        .content-table td {
+            vertical-align: top;
+        }
+
+        .activities-column {
+            width: 62%;
+        }
+
+        .contributions-column {
+            width: 38%;
+        }
+
+        .left-content {
+            border: 1px solid #d9ded9;
+            border-right: 0;
+            min-height: 380px;
+            padding: 12px;
+        }
+
+        .right-content {
+            border: 1px solid #d9ded9;
+            min-height: 380px;
+            padding: 12px;
+        }
+
+        .activities {
+            overflow: visible;
+            word-wrap: break-word;
+        }
+
+        .activities p {
+            margin: 0 0 8px;
+        }
+
+        .activities ul {
+            margin: 5px 0 8px;
+            padding-left: 18px;
+        }
+
+        .activities li {
+            margin-bottom: 4px;
+        }
+
+        .activities img {
             height: auto;
-        }
-
-        .content .contributions {
-            flex: 0 0 48%;
+            max-width: 100%;
         }
 
         .contributions-table {
-            width: 100%;
             border-collapse: collapse;
-            font-size: 10pt;
-        }
-
-        .contributions-table th,
-        .contributions-table td {
-            border: 1px solid #000;
-            padding: 8px;
-            text-align: left;
+            font-size: 8px;
+            margin-top: 7px;
+            width: 100%;
         }
 
         .contributions-table th {
-            background-color: #f2f2f2;
+            background: #e8efe9;
+            color: #174a3a;
+            font-weight: bold;
+            padding: 6px 5px;
+            text-align: left;
         }
 
-        .activities, .contact, .member-info, .instructions {
-            margin: 20px 0;
-            font-size: 10pt;
+        .contributions-table td {
+            border-bottom: 1px solid #d9ded9;
+            padding: 5px;
         }
 
-        .activities ul, .instructions ul {
-            list-style-type: disc;
-            margin-left: 20px;
+        .contributions-table tr:nth-child(even) td {
+            background: #fafcfa;
         }
 
-        .qr-code-placeholder {
-            width: 100px;
-            height: 100px;
-            background-color: #ddd;
+        .value {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .contribution-highlight {
+            background: #fffaf0;
+            border: 1px solid #d9b86e;
+            color: #4b3a13;
+            font-size: 10px;
+            font-weight: bold;
+            margin-top: 12px;
+            padding: 9px 12px;
             text-align: center;
-            line-height: 100px;
-            margin: 10px 0;
+        }
+
+        .instructions {
+            border: 1px solid #d9ded9;
+            padding: 10px 12px;
+        }
+
+        .instructions p {
+            margin: 0 0 8px;
+        }
+
+        .instructions ul {
+            margin: 5px 0 8px;
+            padding-left: 18px;
+        }
+
+        .instructions li {
+            margin-bottom: 4px;
         }
 
         .footer {
-            margin-top: 20px;
-            font-size: 10pt;
-            text-align: center;
+            border-top: 1px solid #d9ded9;
+            color: #59645d;
+            font-size: 8px;
+            margin-top: 14px;
+            padding-top: 8px;
+        }
+
+        .footer-table td:last-child {
+            text-align: right;
         }
     </style>
 </head>
+
 <body>
-    <div class="container">
-        <!-- Cabeçalho: Logos e dados em uma linha -->
-        <div class="header">
-            <img src="{{ $parochialUnion->logo ?? asset('images/uniao_paroquial_logo.png') }}" alt="Logo União Paroquial" class="logo">
-            <div class="union-info">
-                <h1>{{ $parochialUnion->name ?? 'IGREJA EVANGÉLICA LUTERANA DE SÃO PAULO' }}</h1>
-                <p>{{ $parochialUnion->address ?? 'Rua Barão de Itapetininga, 255 - CJ 510, 01042-001, B. República - São Paulo/SP' }}</p>
-                <p>Tel: {{ $parochialUnion->tel ?? '(11) 3257-8418' }} | E-mail: {{ $parochialUnion->email ?? 'upsp@uol.com.br' }}</p>
-                <p>CNPJ: {{ $parochialUnion->cnpj ?? '61.137.543/0001-40' }}</p>
-            </div>
-            <div class="parish-info">
-                <h2>{{ $parish->name ?? 'GUARULHOS' }}</h2>
-                <p>{{ $parish->address ?? 'Rua Cidade Lion, 129 - Picanço, 07094-190 - Guarulhos/SP' }}</p>
-                <p>Tel: {{ $parish->tel ?? '(11) 2459-1169' }} | E-mail: {{ $parish->email ?? 'paroguaru@luteranos.com.br' }}</p>
-                <p>Site: {{ $parish->website ?? 'www.luteranos.com.br/guarulhos' }}</p>
-            </div>
-            <img src="{{ $parish->logo ?? asset('images/paroquia_logo.png') }}" alt="Logo Paróquia" class="logo">
-        </div>
+    @php
+    $logoDataUri = function (?string $logo): ?string {
+    if (empty($logo)) {
+    return null;
+    }
 
-        <!-- Lema bíblico -->
-        <div class="motto">
-            "{{ $config->motto ?? 'Tu me farás ver os caminhos da vida. Sl 16.11' }}"
-        </div>
+    $logo = preg_replace('#^storage/#', '', ltrim($logo, '/'));
+    $filePath = public_path('storage/' . $logo);
 
-        <!-- Conteúdo principal: Duas colunas -->
-        <div class="content">
-            <!-- Coluna esquerda: Observações -->
-            <div class="observations">
-                <strong>Observações</strong>
-                <div>{!! $config->observations ?? '<p>No Salmo 16.11, a afirmação de que "Tu me farás ver os caminhos da vida" não só aponta para a direção que Deus nos dá, mas também para a promessa de que, nele, encontramos o verdadeiro propósito da nossa existência...</p>' !!}</div>
-            </div>
-            <!-- Coluna direita: Tabela de contribuições -->
-            <div class="contributions">
-                <strong>Últimas Contribuições</strong>
-                <table class="contributions-table">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Referência</th>
-                            <th>Valor R$</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($contributions as $contribution)
-                            <tr>
-                                <td>{{ $contribution->date->format('d/m/Y') }}</td>
-                                <td>{{ $contribution->reference }}</td>
-                                <td>{{ number_format($contribution->value, 2, ',', '.') }}</td>
-                            </tr>
-                        @endforeach
-                        @if (empty($contributions))
-                            <tr>
-                                <td>15/01/2025</td>
-                                <td>01/2025</td>
-                                <td>30,00</td>
-                            </tr>
-                            <tr>
-                                <td>16/12/2024</td>
-                                <td>12/2024</td>
-                                <td>30,00</td>
-                            </tr>
-                            <tr>
-                                <td>18/11/2024</td>
-                                <td>11/2024</td>
-                                <td>30,00</td>
-                            </tr>
-                            <tr>
-                                <td>15/10/2024</td>
-                                <td>10/2024</td>
-                                <td>30,00</td>
-                            </tr>
-                            <tr>
-                                <td>16/09/2024</td>
-                                <td>09/2024</td>
-                                <td>30,00</td>
-                            </tr>
-                            <tr>
-                                <td>14/08/2024</td>
-                                <td>08/2024</td>
-                                <td>30,00</td>
-                            </tr>
-                        @endif
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    if (!is_file($filePath)) {
+    return null;
+    }
 
-        <!-- Atividades da comunidade -->
-        <div class="activities">
-            <p><strong>ATIVIDADES QUE VÃO ACONTECER NA COMUNIDADE:</strong></p>
-            <ul>
-                <li>Retorno Culto Infantil: 02/02/2025, às 09h30.</li>
-                <li>Almoço Jovem: 09/02/2025 - o almoço será servido após o culto.</li>
-                <li>Culto dos Aniversariantes: 23/02/2025, às 09h30.</li>
-            </ul>
-            <p>Todas as pessoas que fazem aniversário no mês de fevereiro estão convidadas a participar do culto dos aniversariantes, para receberem uma bênção.</p>
-        </div>
+    return 'data:' . mime_content_type($filePath)
+    . ';base64,'
+    . base64_encode(file_get_contents($filePath));
+    };
 
-        <!-- Cultos gerais -->
-        <div class="contact">
-            <p><strong>CULTOS GERAIS:</strong> todos os domingos, às 9h30 - com Culto Infantil e transmissão pelo YOUTUBE Luteranos Guarulhos.</p>
-            <p><strong>ESTAMOS SEMPRE À DISPOSIÇÃO! DEUS TE ABENÇOE!</strong></p>
-            <p>Pastor Tiago Jaske - 11 99754 4941 | Pastor em treinamento Ivaír Strelow - 11 99558 9000 (ligação ou WhatsApp)</p>
-        </div>
+    $unionLogoSrc = $logoDataUri($parochialUnion->logo);
+    $parishLogoSrc = $logoDataUri($parish->logo);
+    @endphp
 
-        <!-- Informações do membro -->
-        <div class="member-info">
-            <p><strong>Membro:</strong> {{ $member->name ?? 'Alexandre Martins Roberto' }}</p>
-            <p><strong>CPF:</strong> {{ $member->cpf ?? '142.033.968-08' }}</p>
-            <p><strong>Endereço:</strong> {{ $member->address ?? 'Rua Segundo-Tenente Gildo Zanim Pistolato, 83, 07115-006 - Guarulhos/SP' }}</p>
-        </div>
+    <table class="header-table">
+        <tr>
+            <td class="logo-cell">
+                @if ($unionLogoSrc)
+                <img class="logo" src="{{ $unionLogoSrc }}" alt="Logo União Paroquial">
+                @endif
+            </td>
 
-        <!-- Instruções de contribuição -->
-        <div class="instructions">
-            <p>O boleto para a sua contribuição está no verso deste informativo. Os boletos da IELSP são registrados pela empresa de intermediação de pagamentos ASAAS Gestão Financeira.</p>
-            <p>Sua contribuição é livre e espontânea, mas por exigência do Banco Central somos obrigados a colocar uma data de vencimento e um valor na emissão dos boletos.</p>
-            <p>Para alterar a data ou o valor da sua contribuição, entre em contato com a União Paroquial ou a secretaria da Comunidade através dos e-mails e telefones acima, ou via WhatsApp: +55 11 2991-3477.</p>
-            <p><strong>Formas de Contribuição:</strong></p>
-            <ul>
-                <li>Utilizar o boleto no verso desta carta, em qualquer banco, lotérica ou internet banking.</li>
-                <li>Entregar a sua contribuição (ou utilizar cartão débito/crédito) nos cultos ou na secretaria da sua Comunidade.</li>
-                <li>Fazer PIX para a chave CNPJ 61.137.543/0001-40.</li>
-                <li>Fazer transferência ou DOC/TED para Igreja Evangélica Luterana de SP, Banco Itaú (341) - Ag 0057, C/C 66.066-4.</li>
-                <li>Utilizar o intermediador de pagamentos ASAAS, para contribuir com cartão de crédito via link: <a href="https://www.asaas.com/c/026023069125">https://www.asaas.com/c/026023069125</a>.</li>
-            </ul>
-            <p>(Se for efetuado depósito na conta, enviar comprovante para e-mail ou WhatsApp 11 2991-3477)</p>
-            <div class="qr-code-placeholder">QR Code PIX (Placeholder)</div>
-            <p><em>"A contribuição proporcional é minha oferta de gratidão à igreja por tudo o que o Senhor me tem concedido."</em></p>
-            <p><strong>AGRADECEMOS PELA SUA CONTRIBUIÇÃO REGULAR!</strong></p>
-        </div>
+            <td class="union-cell">
+                <p class="union-name">
+                    {{ $parochialUnion->trade_name ?? $parochialUnion->name }}
+                </p>
 
-        <!-- Rodapé -->
-        <div class="footer">
-            <p>Agradecemos pela sua participação e colaboração.</p>
-            <p>Ref.: {{ $config->reference_date->format('m/Y') ?? 'Fevereiro/2025' }}</p>
-        </div>
+                <p class="small-text">{{ $parochialUnion->address }}</p>
+
+                <p class="small-text">
+                    Tel.: {{ formatPhone($parochialUnion->phone ?? formatPhone($parochialUnion->tel)) }}
+                    | E-mail: {{ $parochialUnion->email }}
+                </p>
+
+                <p class="small-text">CNPJ: {{ formatCnpj($parochialUnion->cnpj) }}</p>
+            </td>
+
+            <td class="parish-cell">
+                <p class="parish-name">{{ $parish->name }}</p>
+                <p class="small-text">{{ $parish->address }}</p>
+
+                <p class="small-text">
+                    Tel.: {{ formatPhone($parish->phone ?? formatPhone($parish->tel)) }}
+                    | E-mail: {{ $parish->email }}
+                </p>
+
+                @if ($parish->website)
+                <p class="small-text">Site: {{ $parish->website }}</p>
+                @endif
+            </td>
+
+            <td class="logo-cell">
+                @if ($parishLogoSrc)
+                <img class="logo" src="{{ $parishLogoSrc }}" alt="Logo Paróquia">
+                @endif
+            </td>
+        </tr>
+    </table>
+
+    <div class="divider"></div>
+
+    <div class="motto">
+        “{{ $config->motto }}”
+    </div>
+
+    <div class="mailing-address">
+        <p class="recipient-name">
+            <b>{{ $member->name }} -- {{ $member->id }}</b>
+        </p>
+
+        <p>
+            {{ $member->address }}, {{ $member->number }}
+            @if ($member->complement)
+            - {{ $member->complement }}
+            @endif
+        </p>
+
+        @if ($member->district)
+        <p>{{ $member->district }}</p>
+        @endif
+
+        <p>
+            <b>{{ formatCep($member->cep) }}</b> - {{ $member->city }} / {{ $member->state }}
+        </p>
+    </div>
+
+    <table class="content-table">
+        <tr>
+            <td class="activities-column">
+                <div class="section-title">Atividades da comunidade</div>
+
+                <div class="left-content activities">
+                    {!! $config->observations !!}
+                </div>
+            </td>
+
+            <td>
+                <div class="section-title">Últimas contribuições</div>
+
+                <div class="right-content">
+                    <table class="contributions-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Referência</th>
+                                <th class="value">Valor</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @forelse ($contributions as $contribution)
+                            <tr>
+                                <td>
+                                    {{ $contribution->contribution_date->format('d/m/Y') }}
+                                </td>
+
+                                <td>{{ $contribution->period }}</td>
+
+                                <td class="value">
+                                    R$ {{ number_format($contribution->amount, 2, ',', '.') }}
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="3" style="text-align: center;">
+                                    Nenhuma contribuição encontrada.
+                                </td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="contribution-highlight">
+        Contribuição referente a {{ $config->reference_date->format('m/Y') }}
+    </div>
+
+    <div class="section-title">Formas de contribuição</div>
+
+    <div class="instructions">
+        <p>
+            Sua contribuição é livre e espontânea. Para alterar data ou valor,
+            entre em contato com a União Paroquial ou com a secretaria da Comunidade.
+        </p>
+
+        <ul>
+            <li>Utilizar o boleto no verso desta carta.</li>
+            <li>Entregar a contribuição nos cultos ou na secretaria.</li>
+            <li>Fazer PIX para a chave CNPJ 61.137.543/0001-40.</li>
+            <li>
+                Fazer transferência para Igreja Evangélica Luterana de SP,
+                Banco Itaú (341), Agência 0057, Conta 66.066-4.
+            </li>
+        </ul>
+
+        <p>
+            <strong>AGRADECEMOS PELA SUA CONTRIBUIÇÃO REGULAR!</strong>
+        </p>
+    </div>
+
+    <div class="footer">
+        <table class="footer-table">
+            <tr>
+                <td>Agradecemos pela sua participação e colaboração.</td>
+                <td>Ref.: {{ $config->reference_date->format('m/Y') }}</td>
+            </tr>
+        </table>
     </div>
 </body>
+
 </html>

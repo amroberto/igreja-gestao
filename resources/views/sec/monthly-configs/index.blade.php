@@ -42,7 +42,7 @@
                         @foreach ($configs as $config)
                             <tr>
                                 <td>{{ $config->community->name ?? 'Comunidade não encontrada' }}</td>
-                                <td>{{ $config->reference }}</td>
+                                <td>{{ \Carbon\Carbon::parse($config->reference)->format('m/Y') }}</td>
                                 <td>
                                     <a href="{{ route('sec.monthly-configs.show', $config) }}" class="btn btn-info btn-sm">
                                         <i class="fas fa-eye"></i> Visualizar

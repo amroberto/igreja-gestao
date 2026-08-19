@@ -164,11 +164,11 @@
                             , targets: 4
                         }, // Comunidade
                         {
-                            width: '14%'
+                            width: '13%'
                             , targets: 5
                         }, // Forma de Pagamento
                         {
-                            width: '10%'
+                            width: '9%'
                             , targets: 6
                         }, // Período
                         {
@@ -176,7 +176,7 @@
                             , targets: 7
                         }, // Valor
                         {
-                            width: '14%'
+                            width: '15%'
                             , targets: 8
                         }, // Ações
                     ]

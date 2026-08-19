@@ -37,21 +37,25 @@
         </div>
         <div class="card-body">
             <div class="row">
-                <div class="mb-3 col-md-3 col-sm-6">
+                <div class="mb-2 col-md-2 col-sm-6">
+                    <strong><i class="mr-1 fas fa-id-badge"></i> {{ __('ID do Membro') }}:</strong>
+                    <p class="text-muted">{{ $member->id }}</p>
+                </div>
+                <div class="mb-4 col-md-4 col-sm-6">
                     <strong><i class="mr-1 fas fa-user"></i> {{ __('Nome Completo') }}:</strong>
                     <p class="text-muted">{{ $member->name ?: 'N/A' }}</p>
                 </div>
-                <div class="mb-3 col-md-3 col-sm-6">
+                <div class="mb-2 col-md-2 col-sm-6">
                     <strong><i class="mr-1 fas fa-calendar-alt"></i> {{ __('Data de Nascimento') }}:</strong>
                     <p class="text-muted">{{ $member->birth_date ? $member->birth_date->format('d/m/Y') : 'N/A' }}</p>
                 </div>
-                <div class="mb-3 col-md-3 col-sm-6">
+                <div class="mb-2 col-md-2 col-sm-6">
                     <strong><i class="mr-1 fas fa-ring"></i> {{ __('Estado Civil') }}:</strong>
                     <p class="text-muted">{{ $member->marital_status ? ucfirst($member->marital_status) : 'N/A' }}</p>
                 </div>
-                <div class="mb-3 col-md-3 col-sm-6">
+                <div class="mb-2 col-md-2 col-sm-6">
                     <strong><i class="mr-1 fas fa-venus-mars"></i> {{ __('Gênero') }}:</strong>
-                    <p class="text-muted">{{ $member->gender->label() }}</p>
+                    <p class="text-muted">{{ $member->gender?->label() }}</p>
                 </div>
             </div>
             <div class="row">
@@ -163,6 +167,34 @@
             </div>
         </div>
     </div>
+
+    <!-- Informações de contribuição mensal-->
+    <div class="card card-secondary card-outline">
+        <div class="card-header">
+            <h3 class="card-title"><i class="mr-2 fas fa-hand-holding-usd"></i>{{ __('Informações de Contribuição Mensal') }}</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="mb-3 col-md-3 col-sm-12">
+                    <strong><i class="mr-1 fas fa-calendar-alt"></i> {{ __('Método de Pagamento') }}:</strong>
+                    <p class="text-muted">{{ $member->payment_method ?: 'N/A' }}</p>
+                </div>
+                <!-- delivery method -->
+                <div class="mb-3 col-md-3 col-sm-12">
+                    <strong><i class="mr-1 fas fa-truck"></i> {{ __('Método de Entrega') }}:</strong>
+                    <p class="text-muted">{{ $member->delivery_method ?: 'N/A' }}</p>
+                </div>
+                <div class="mb-3 col-md-3 col-sm-12">
+                    <strong><i class="mr-1 fas fa-money-bill-wave"></i> {{ __('Valor mensal') }}:</strong>
+                    <p class="text-muted">R$ {{ number_format($member->amount, 2, ',', '.') }}</p>
+                </div>
+                <!-- DIA DO MÊS - DUE_DATE -->
+                <div class="mb-3 col-md-3 col-sm-12">
+                    <strong><i class="mr-1 fas fa-calendar-day"></i> {{ __('Dia do Mês') }}:</strong>
+                    <p class="text-muted">{{ $member->due_date ?: 'N/A' }}</p>
+                </div>
+            </div>
+        </div>
 
     <!-- Contribuições -->
     <div class="card card-danger card-outline">
