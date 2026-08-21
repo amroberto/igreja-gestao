@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Sec;
 
+use App\Helpers\PixHelper;
 use App\Models\Contribution;
 use App\Models\MonthlyConfig;
 use App\Models\ParochialUnion;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -207,22 +210,21 @@ class MonthlyConfigController extends Controller
         return view('sec.monthly-configs.show', compact('monthlyConfig'));
     }
 
+    /**
+     * Exibe a pré-visualização em PDF do Informativo Mensal.
+     */
     public function preview(MonthlyConfig $monthlyConfig)
     {
         $user = Auth::user();
         $communityIds = $this->getUserCommunityIds($user);
 
-        if (!in_array(
-            (string) $monthlyConfig->community_id,
-            array_map('strval', $communityIds)
-        )) {
+        if (!in_array((string) $monthlyConfig->community_id, array_map('strval', $communityIds))) {
             return redirect()
                 ->route('sec.monthly-configs.index')
                 ->with('error', 'Você não tem permissão para visualizar esta configuração.');
         }
 
         $monthlyConfig->load('community.parish');
-
         $parochialUnion = ParochialUnion::first();
 
         if (!$parochialUnion) {
@@ -232,7 +234,6 @@ class MonthlyConfigController extends Controller
         }
 
         $parish = $monthlyConfig->community->parish;
-
         if (!$parish) {
             return redirect()
                 ->route('sec.monthly-configs.index')
@@ -247,10 +248,7 @@ class MonthlyConfigController extends Controller
         if (!$member) {
             return redirect()
                 ->route('sec.monthly-configs.index')
-                ->with(
-                    'error',
-                    'Não há membros cadastrados nesta comunidade para gerar a visualização.'
-                );
+                ->with('error', 'Não há membros cadastrados nesta comunidade para gerar a visualização.');
         }
 
         $config = $monthlyConfig;
@@ -263,54 +261,71 @@ class MonthlyConfigController extends Controller
             ->limit(12)
             ->get();
 
-        $config->observations = preg_replace_callback(
-            '/<img src="([^"]+)"/',
-            function ($match) {
-                $url = $match[1];
+        // 1. FORMATAR AS VARIÁVEIS DE IDENTIFICAÇÃO E DOCUMENTO
+        $memberIdFormatted = str_pad($member->id ?? 1, 6, '0', STR_PAD_LEFT);
+        $configIdFormatted = str_pad($config->id ?? 1, 6, '0', STR_PAD_LEFT);
 
-                if (str_starts_with($url, 'data:image')) {
-                    $filename = 'monthly_configs/image_' . time() . '.png';
-
-                    Storage::disk('public')->put(
-                        $filename,
-                        base64_decode(
-                            preg_replace('#^data:image/\w+;base64,#i', '', $url)
-                        )
-                    );
-
-                    return '<img src="' . asset('storage/' . $filename) . '"';
-                }
-
-                return $match[0];
-            },
-            $config->observations
+        $documentNumber = sprintf(
+            'DOC-%02d-%s-%s',
+            $config->community_id ?? 1,
+            $config->reference_date ? $config->reference_date->format('Ym') : date('Ym'),
+            $memberIdFormatted
         );
 
-        try {
-            $pdf = Pdf::loadView(
-                'sec.monthly-configs.pdf',
-                compact(
-                    'config',
-                    'parochialUnion',
-                    'parish',
-                    'member',
-                    'contributions'
-                )
-            )->setPaper('a4');
+        // 2. IDENTIFICADOR ALFANUMÉRICO PARA O PIX (TXID BACEN)
+        $txid = "ME{$memberIdFormatted}DOC{$configIdFormatted}";
 
-            return $pdf->stream(
-                "config_preview_{$config->reference_date->format('m_Y')}.pdf"
+        // 3. CONTEÚDO DO QR CODE
+        if ($parish->pix_static_enabled && !empty($parish->pix_key)) {
+            $qrContent = PixHelper::generatePayload(
+                pixKey: $parish->pix_key,
+                receiverName: $parish->pix_receiver_name ?? $parish->name,
+                city: $parish->pix_city ?? 'SAO PAULO',
+                amount: null,
+                txid: $txid,
+                pixKeyType: $parish->pix_key_type
             );
-        } catch (\Exception $e) {
-            Log::error('Falha ao gerar preview do PDF', [
-                'monthly_config_id' => $config->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            return redirect()
-                ->route('sec.monthly-configs.index')
-                ->with('error', 'Erro ao gerar o PDF: ' . $e->getMessage());
+        } else {
+            $qrContent = "PREVIEW | MEMBRO: {$memberIdFormatted} | DOC: {$documentNumber}";
         }
+
+        // 4. GERAR O QR CODE EM BASE64
+        $qrCode = new QrCode(
+            data: $qrContent,
+            size: 120,
+            margin: 4
+        );
+
+        $writer = new PngWriter();
+        $qrCodeBase64 = $writer->write($qrCode)->getDataUri();
+
+        // 5. RENDERIZAÇÃO DO PDF (garantindo que $documentNumber está no compact)
+        $pdf = Pdf::loadView(
+            'sec.monthly-configs.pdf',
+            compact(
+                'config',
+                'parochialUnion',
+                'parish',
+                'member',
+                'contributions',
+                'documentNumber',  // <--- VARIÁVEL REINCLUÍDA
+                'qrCodeBase64'
+            )
+        )->setPaper('a4');
+
+        return $pdf->stream("config_preview_{$config->reference_date->format('m_Y')}.pdf");
+    }
+
+    /**
+     * Retorna os IDs das comunidades permitidas para o usuário logado.
+     */
+    private function getUserCommunityIds($user): array
+    {
+        if (method_exists($user, 'communities')) {
+            return $user->communities()->pluck('communities.id')->toArray();
+        }
+
+        return $user->community_id ? [$user->community_id] : [];
     }
 
     public function uploadImage(Request $request)
@@ -324,18 +339,5 @@ class MonthlyConfigController extends Controller
         return response()->json([
             'url' => asset('storage/' . str_replace('public/', '', $path)),
         ]);
-    }
-
-    protected function getUserCommunityIds(User $user): array
-    {
-        $communityIds = $user->communities()
-            ->pluck('communities.id')
-            ->toArray();
-
-        if (empty($communityIds) && $user->community_id) {
-            $communityIds = [$user->community_id];
-        }
-
-        return $communityIds;
     }
 }

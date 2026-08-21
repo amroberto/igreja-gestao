@@ -74,6 +74,7 @@
                 <th>{{ __('Cod. Membro') }}</th>
                 <th>{{ __('Nome') }}</th>
                 <th>{{ __('Período') }}</th>
+                <th>{{ __('Forma de Pagamento') }}</th>
                 <th>{{ __('Meses Pagos') }}</th>
                 <th class="text-right">{{ __('Valor') }}</th>
             </tr>
@@ -95,12 +96,13 @@
                     <td>{{ $contribution->member_id }}</td>
                     <td>{{ $contribution->member->name }}</td>
                     <td>{{ $contribution->period }}</td>
+                    <td>{{ $contribution->payment_method->label() }}</td>
                     <td class="text-center">{{ $mesesPagos }}</td>
                     <td class="text-right">{{ number_format($contribution->amount, 2, ',', '.') }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8" class="text-center">{{ __('Nenhuma contribuição encontrada.') }}</td>
+                    <td colspan="9" class="text-center">{{ __('Nenhuma contribuição encontrada.') }}</td>
                 </tr>
             @endforelse
         </tbody>
@@ -108,7 +110,7 @@
         @if ($contributions->count() > 0)
         <tfoot>
             <tr>
-                <td colspan="6" class="text-right"><strong>{{ __('Total:') }}</strong></td>
+                <td colspan="7" class="text-right"><strong>{{ __('Total:') }}</strong></td>
                 <td class="text-center"><strong>{{ $totalMesesPagos }}</strong></td>
                 <td class="text-right"><strong>{{ number_format($contributions->sum('amount'), 2, ',', '.') }}</strong></td>
             </tr>

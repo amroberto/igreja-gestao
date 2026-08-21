@@ -126,22 +126,21 @@ class ParishController extends Controller
             'pix_city' => ['nullable', 'string', 'max:15', 'required_if:pix_static_enabled,1'],
         ])->validate();
 
-        // Preenche os campos normalmente, exceto 'logo'
-        $parish->fill(Arr::except($validated, 'logo'));
-
         // Se uma nova logo for enviada
         if ($request->hasFile('logo')) {
-            // Remove a logo antiga, se existir
+            // Deletar logo antiga, se existir
             if ($parish->logo && Storage::disk('public')->exists($parish->logo)) {
                 Storage::disk('public')->delete($parish->logo);
             }
-
-            // Salva a nova logo
+            // Salvar nova logo
             $path = $request->file('logo')->store('logos', 'public');
-            $parish->logo = $path;
+            $validated['logo'] = $path;
+        } else {
+            // Se nenhuma nova logo for enviada, manter a antiga
+            $validated['logo'] = $parish->logo;
         }
 
-        $parish->save();
+        $parish->update($validated);
 
         return redirect()->route('admin.parishes.index')->with('success', 'Paróquia atualizada com sucesso.');
     }

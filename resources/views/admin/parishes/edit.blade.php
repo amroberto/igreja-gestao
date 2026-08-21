@@ -262,22 +262,27 @@
                 </div>
 
                 <div class="card-body">
-                    @if ($parish->logo && Storage::disk('public')->exists($parish->logo))
-                    <div class="text-center mb-3">
-                        <img src="{{ Storage::url($parish->logo) }}" alt="Logo da Paróquia"
-                            class="img-fluid rounded shadow-sm"
-                            style="max-width: 200px; max-height: 200px; object-fit: contain;">
-                    </div>
-                    @endif
-
-                    <x-adminlte-input name="logo" label="{{ __('Nova Logo') }}" type="file" accept="image/*"
-                        fgroup-class="has-feedback" error-key="logo" igroup-size="sm">
-                        <x-slot name="prependSlot">
-                            <div class="input-group-text">
-                                <i class="fas fa-upload"></i>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label><i class="fas fa-image mr-1"></i>{{ __('Logo Atual') }}</label>
+                            @if ($parish->logo && Storage::disk('public')->exists($parish->logo))
+                            <div class="card card-light card-outline mb-3">
+                                <div class="card-body text-center">
+                                    <img src="{{ Storage::url($parish->logo) }}" alt="Logo da Paroquia" class="img-fluid rounded shadow-sm" style="max-width: 200px; max-height: 200px; object-fit: contain;">
+                                </div>
                             </div>
-                        </x-slot>
-                    </x-adminlte-input>
+                            @else
+                            <p class="text-muted"><i class="fas fa-info-circle mr-1"></i>{{ __('Nenhuma logo carregada ou arquivo não encontrado') }}</p>
+                            @endif
+                            <x-adminlte-input name="logo" label="{{ __('Nova Logo') }}" type="file" accept="image/*" fgroup-class="has-feedback" error-key="logo" igroup-size="sm">
+                                <x-slot name="prependSlot">
+                                    <div class="input-group-text">
+                                        <i class="fas fa-upload"></i>
+                                    </div>
+                                </x-slot>
+                            </x-adminlte-input>
+                        </div>
+                    </div>
                 </div>
             </div>
 
