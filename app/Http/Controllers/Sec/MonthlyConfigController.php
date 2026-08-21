@@ -6,7 +6,6 @@ use App\Helpers\PixHelper;
 use App\Models\Contribution;
 use App\Models\MonthlyConfig;
 use App\Models\ParochialUnion;
-use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Endroid\QrCode\QrCode;
@@ -14,7 +13,7 @@ use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 
 class MonthlyConfigController extends Controller
@@ -52,116 +51,76 @@ class MonthlyConfigController extends Controller
 
     public function store(Request $request)
     {
-        $user = Auth::user();
-        $communityIds = $this->getUserCommunityIds($user);
-
-        $request->validate([
-            'community_id' => [
-                'required',
-                'exists:communities,id',
-                function ($attribute, $value, $fail) use ($communityIds) {
-                    if (!in_array((string) $value, array_map('strval', $communityIds))) {
-                        $fail('A comunidade selecionada não está associada ao seu usuário.');
-                    }
-                },
-            ],
+        $validated = $request->validate([
+            'community_id'   => 'required|exists:communities,id',
             'reference_date' => 'required|date_format:Y-m',
-            'motto' => 'required|string|max:255',
-            'observations' => 'required|string',
+            'motto'          => 'required|string|max:255',
+            'content_type'   => 'required|in:text,image',
+            'observations'   => 'required_if:content_type,text|nullable|string',
+            'image_file'     => 'required_if:content_type,image|nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
-        $referenceDate = Carbon::createFromFormat(
-            'Y-m',
-            $request->reference_date
-        )->startOfMonth();
+        $validated['reference_date'] = $validated['reference_date'] . '-01';
 
-        MonthlyConfig::create([
-            'community_id' => $request->community_id,
-            'reference_date' => $referenceDate->toDateString(),
-            'motto' => $request->motto,
-            'observations' => $request->observations,
-        ]);
+        // Upload de imagem caso o tipo selecionado seja 'image'
+        if ($request->content_type === 'image' && $request->hasFile('image_file')) {
+            $path = $request->file('image_file')->store('monthly_configs', 'public');
+            $validated['image_path'] = $path;
+            $validated['observations'] = null; // Limpa texto se houver
+        }
 
-        return redirect()
-            ->route('sec.monthly-configs.index')
-            ->with('success', 'Configuração criada com sucesso!');
+        MonthlyConfig::create($validated);
+
+        return redirect()->route('sec.monthly-configs.index')
+            ->with('success', __('Configuração criada com sucesso!'));
     }
 
-    public function edit(MonthlyConfig $monthlyConfig)
+    public function edit($id)
     {
-        $user = Auth::user();
-        $communityIds = $this->getUserCommunityIds($user);
+        $monthlyConfig = MonthlyConfig::findOrFail($id);
+        $communities = Community::orderBy('name')->get();
 
-        if (!in_array(
-            (string) $monthlyConfig->community_id,
-            array_map('strval', $communityIds)
-        )) {
-            return redirect()
-                ->route('sec.monthly-configs.index')
-                ->with('error', 'Você não tem permissão para editar esta configuração.');
-        }
-
-        $communities = $user->communities;
-
-        if ($communities->isEmpty() && $user->community) {
-            $communities = collect([$user->community]);
-        }
-
-        return view(
-            'sec.monthly-configs.edit',
-            compact('monthlyConfig', 'communities')
-        );
+        return view('sec.monthly_configs.edit', compact('monthlyConfig', 'communities'));
     }
 
-    public function update(Request $request, MonthlyConfig $monthlyConfig)
+    public function update(Request $request, $id)
     {
-        $user = Auth::user();
-        $communityIds = $this->getUserCommunityIds($user);
+        $monthlyConfig = MonthlyConfig::findOrFail($id);
 
-        if (!in_array(
-            (string) $monthlyConfig->community_id,
-            array_map('strval', $communityIds)
-        )) {
-            return redirect()
-                ->route('sec.monthly-configs.index')
-                ->with('error', 'Você não tem permissão para editar esta configuração.');
-        }
-
-        $request->validate([
-            'community_id' => [
-                'required',
-                'exists:communities,id',
-                function ($attribute, $value, $fail) use ($communityIds) {
-                    if (!in_array((string) $value, array_map('strval', $communityIds))) {
-                        $fail('A comunidade selecionada não está associada ao seu usuário.');
-                    }
-                },
-            ],
+        $validated = $request->validate([
+            'community_id'   => 'required|exists:communities,id',
             'reference_date' => 'required|date_format:Y-m',
-            'motto' => 'required|string|max:255',
-            'observations' => 'required|string|max:1000',
+            'motto'          => 'required|string|max:255',
+            'content_type'   => 'required|in:text,image',
+            'observations'   => 'required_if:content_type,text|nullable|string',
+            'image_file'     => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
-        $referenceDate = Carbon::createFromFormat(
-            'Y-m',
-            $request->reference_date
-        )->startOfMonth();
+        $validated['reference_date'] = $validated['reference_date'] . '-01';
 
-        $monthlyConfig->update([
-            'community_id' => $request->community_id,
-            'reference_date' => $referenceDate->toDateString(),
-            'motto' => $request->motto,
-            'observations' => preg_replace(
-                '/required="required" rows="\d+" >/',
-                '',
-                $request->observations
-            ),
-        ]);
+        if ($request->content_type === 'image') {
+            if ($request->hasFile('image_file')) {
+                // Remove a imagem antiga se existir
+                if ($monthlyConfig->image_path && Storage::disk('public')->exists($monthlyConfig->image_path)) {
+                    Storage::disk('public')->delete($monthlyConfig->image_path);
+                }
+                $validated['image_path'] = $request->file('image_file')->store('monthly_configs', 'public');
+            }
+            $validated['observations'] = null;
+        } else {
+            // Se trocou para texto, exclui imagem salva anteriormente se houver
+            if ($monthlyConfig->image_path && Storage::disk('public')->exists($monthlyConfig->image_path)) {
+                Storage::disk('public')->delete($monthlyConfig->image_path);
+            }
+            $validated['image_path'] = null;
+        }
 
-        return redirect()
-            ->route('sec.monthly-configs.index')
-            ->with('success', 'Configuração atualizada com sucesso!');
+        $monthlyConfig->update($validated);
+
+        return redirect()->route('sec.monthly-configs.index')
+            ->with('success', __('Configuração atualizada com sucesso!'));
     }
+
 
     public function destroy(MonthlyConfig $monthlyConfig)
     {
@@ -261,21 +220,45 @@ class MonthlyConfigController extends Controller
             ->limit(12)
             ->get();
 
-        // 1. FORMATAR AS VARIÁVEIS DE IDENTIFICAÇÃO E DOCUMENTO
+
+        $observationsHtml = $config->observations;
+
+        if ($observationsHtml) {
+            // Busca todas as tags <img> dentro do HTML de observações
+            $observationsHtml = preg_replace_callback('/<img[^>]+src=["\']([^"\']+)["\']/i', function ($matches) {
+                $src = $matches[1];
+
+                // Se já for Base64, mantém como está
+                if (str_starts_with($src, 'data:image')) {
+                    return $matches[0];
+                }
+
+                // Se for uma URL completa ou caminho relativo com /storage/
+                $cleanPath = preg_replace('#^https?://[^/]+/#', '', $src); // Remove domínio se houver
+                $cleanPath = ltrim(preg_replace('#^storage/#', '', ltrim($cleanPath, '/')), '/');
+
+                $filePath = public_path('storage/' . $cleanPath);
+
+                // Se o arquivo físico existir no servidor, converte para Base64
+                if (File::exists($filePath)) {
+                    $type = pathinfo($filePath, PATHINFO_EXTENSION);
+                    $data = File::get($filePath);
+                    $base64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
+
+                    return str_replace($src, $base64, $matches[0]);
+                }
+
+                return $matches[0];
+            }, $observationsHtml);
+        }
+
+        // Número de documento simplificado para o preview (ex: 000001)
+        $documentNumber = '000001';
+
+        // TXID do Pix mantendo a relação Membro/Documento no Bacen (ex: ME000129DOC000001)
         $memberIdFormatted = str_pad($member->id ?? 1, 6, '0', STR_PAD_LEFT);
-        $configIdFormatted = str_pad($config->id ?? 1, 6, '0', STR_PAD_LEFT);
+        $txid = "ME{$memberIdFormatted}DOC{$documentNumber}";
 
-        $documentNumber = sprintf(
-            'DOC-%02d-%s-%s',
-            $config->community_id ?? 1,
-            $config->reference_date ? $config->reference_date->format('Ym') : date('Ym'),
-            $memberIdFormatted
-        );
-
-        // 2. IDENTIFICADOR ALFANUMÉRICO PARA O PIX (TXID BACEN)
-        $txid = "ME{$memberIdFormatted}DOC{$configIdFormatted}";
-
-        // 3. CONTEÚDO DO QR CODE
         if ($parish->pix_static_enabled && !empty($parish->pix_key)) {
             $qrContent = PixHelper::generatePayload(
                 pixKey: $parish->pix_key,
@@ -308,8 +291,9 @@ class MonthlyConfigController extends Controller
                 'parish',
                 'member',
                 'contributions',
-                'documentNumber',  // <--- VARIÁVEL REINCLUÍDA
-                'qrCodeBase64'
+                'documentNumber',
+                'qrCodeBase64',
+                'observationsHtml' // <--- PASSE A VARIÁVEL TRATADA
             )
         )->setPaper('a4');
 
@@ -331,13 +315,19 @@ class MonthlyConfigController extends Controller
     public function uploadImage(Request $request)
     {
         $request->validate([
-            'file' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+            'file' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:1024',
         ]);
 
-        $path = $request->file('file')->store('public/monthly_configs');
+        if ($request->hasFile('file')) {
+            // Salva a imagem no disco público (storage/app/public/uploads)
+            $path = $request->file('file')->store('uploads', 'public');
 
-        return response()->json([
-            'url' => asset('storage/' . str_replace('public/', '', $path)),
-        ]);
+            // Retorna a URL acessível publicamente
+            return response()->json([
+                'url' => asset('storage/' . $path)
+            ]);
+        }
+
+        return response()->json(['message' => 'Nenhum arquivo enviado.'], 400);
     }
 }

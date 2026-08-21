@@ -18,12 +18,6 @@
 
 @section('content')
 
-@if (session('success'))
-<x-adminlte-alert theme="success" title="{{ __('Sucesso') }}" icon="fas fa-check-circle" dismissable>
-    {{ session('success') }}
-</x-adminlte-alert>
-@endif
-
 @if ($errors->any())
 <x-adminlte-alert theme="danger" title="{{ __('Erros de Validação') }}" icon="fas fa-exclamation-triangle" dismissable>
     <ul class="mb-0">
@@ -36,15 +30,13 @@
 
 <x-adminlte-card title="{{ __('Configurar Carta de Contribuição Mensal') }}" theme="primary" icon="fas fa-file-alt" collapsible>
 
-    <form method="POST" action="{{ route('sec.monthly-configs.store') }}">
+    <form method="POST" action="{{ route('sec.monthly-configs.store') }}" enctype="multipart/form-data">
         @csrf
         <div class="row mb-4">
             <div class="col-md-6">
-                <x-adminlte-select name="community_id" label="{{ __('Comunidade') }}" fgroup-class="has-feedback" error-key="community_id" igroup-size="sm" required>
+                <x-adminlte-select name="community_id" id="community_id" label="{{ __('Comunidade') }}" fgroup-class="has-feedback" error-key="community_id" igroup-size="sm" required>
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-building"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-building"></i></div>
                     </x-slot>
                     <option value="">{{ __('Selecione uma Comunidade') }}</option>
                     @foreach($communities as $community)
@@ -57,95 +49,88 @@
             <div class="col-md-6">
                 <x-adminlte-input name="reference_date" label="{{ __('Mês de Referência (mês/ano)') }}" type="month" value="{{ old('reference_date', request()->input('reference_date', now()->format('Y-m'))) }}" fgroup-class="has-feedback" error-key="reference_date" igroup-size="sm" required>
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-calendar-alt"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-calendar-alt"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
         </div>
+
         <div class="row mb-4">
             <div class="col-md-12">
                 <x-adminlte-input name="motto" label="{{ __('Lema Bíblico') }}" value="{{ old('motto', 'Tu me farás ver os caminhos da vida. Sl 16.11') }}" fgroup-class="has-feedback" error-key="motto" igroup-size="sm" required>
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-bible"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-bible"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
         </div>
+
+        <!-- Seletor do Tipo de Conteúdo -->
         <div class="row mb-4">
             <div class="col-md-12">
-                <x-adminlte-text-editor name="observations" label="Observações" maxlength="1500" value="{{ old('observations', 'A contribuição proporcional é minha oferta de gratidão à igreja.') }}" required rows=5 id="observations">
+                <label class="font-weight-bold">{{ __('Tipo de Conteúdo para Observações') }}</label>
+                <div class="d-flex align-items-center">
+                    <div class="custom-control custom-radio mr-4">
+                        <input class="custom-control-input" type="radio" id="type_text" name="content_type" value="text" {{ old('content_type', 'text') == 'text' ? 'checked' : '' }}>
+                        <label for="type_text" class="custom-control-label">{{ __('Texto Personalizado') }}</label>
+                    </div>
+                    <div class="custom-control custom-radio">
+                        <input class="custom-control-input" type="radio" id="type_image" name="content_type" value="image" {{ old('content_type') == 'image' ? 'checked' : '' }}>
+                        <label for="type_image" class="custom-control-label">{{ __('Imagem / Card Promocional') }}</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bloco de Texto -->
+        <div class="row mb-4" id="text_block">
+            <div class="col-md-12">
+                <x-adminlte-textarea name="observations" label="{{ __('Observações') }}" fgroup-class="has-feedback" error-key="observations" rows="4">
                     {{ old('observations', 'A contribuição proporcional é minha oferta de gratidão à igreja.') }}
-                </x-adminlte-text-editor>
-                @error('observations')
-                <span class="text-danger">{{ $message }}</span>
-                @enderror
+                </x-adminlte-textarea>
+            </div>
+        </div>
+
+        <!-- Bloco de Upload de Imagem -->
+        <div class="row mb-4" id="image_block" style="display: none;">
+            <div class="col-md-12">
+                <x-adminlte-input-file name="image_file" id="image_file" label="{{ __('Imagem ou Card (PNG, JPG, WEBP - máx 2MB)') }}" placeholder="{{ __('Escolha a imagem...') }}" fgroup-class="has-feedback" error-key="image_file">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text"><i class="fas fa-image"></i></div>
+                    </x-slot>
+                </x-adminlte-input-file>
             </div>
         </div>
 
         <div class="row">
             <div class="col-md-12">
                 <x-adminlte-button type="submit" theme="primary" label="{{ __('Salvar') }}" icon="fas fa-save" class="btn-lg mr-2" />
-                <x-adminlte-button theme="secondary" label="{{ __('Voltar') }}" icon="fas fa-arrow-left" class="btn-lg" onclick="window.location='{{ route('sec.monthly-configs.index') }}'" />
+                <a href="{{ route('sec.monthly-configs.index') }}" class="btn btn-secondary btn-lg">
+                    <i class="fas fa-arrow-left"></i> {{ __('Voltar') }}
+                </a>
             </div>
         </div>
     </form>
 </x-adminlte-card>
 @endsection
 
-@section('css')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.css">
-@endsection
-
 @section('js')
-<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.js"></script>
 <script>
-        $(document).ready(function() {
-            $('#observations').summernote({
-                height: 500,
-                toolbar: [
-                    ['style', ['bold', 'italic', 'underline', 'clear']],
-                    ['font', ['strikethrough', 'superscript', 'subscript']],
-                    ['fontsize', ['fontsize']],
-                    ['color', ['color']],
-                    ['para', ['ul', 'ol', 'paragraph']],
-                    ['height', ['height']],
-                    ['table', ['table']],
-                    ['insert', ['link', 'picture', 'hr']],
-                    ['view', ['fullscreen', 'codeview']],
-                ],
-                callbacks: {
-                    onImageUpload: function(files) {
-                        let formData = new FormData();
-                        formData.append('file', files[0]);
-                        $.ajax({
-                            url: '{{ route('sec.monthly-configs.upload-image') }}',
-                            method: 'POST',
-                            data: formData,
-                            contentType: false,
-                            processData: false,
-                            headers: {
-                                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                            },
-                            success: function(response) {
-                                $('#observations').summernote('insertImage', response.url);
-                            },
-                            error: function(xhr) {
-                                alert('Erro ao fazer upload da imagem: ' + (xhr.responseJSON?.message || 'Erro desconhecido'));
-                            }
-                        });
-                    }
-                }
-            });
+    $(document).ready(function() {
+        function toggleContentType() {
+            let selectedType = $('input[name="content_type"]:checked').val();
+            if (selectedType === 'image') {
+                $('#text_block').hide();
+                $('#image_block').show();
+            } else {
+                $('#image_block').hide();
+                $('#text_block').show();
+            }
+        }
 
-            // Debug form submission
-            $('#monthlyConfigForm').on('submit', function() {
-                console.log('Form submitted with community_id:', $('#community_id').val());
-                console.log('Form data:', $(this).serialize());
-            });
-        });
-    </script>
+        // Aplica na montagem inicial e ao alternar
+        toggleContentType();
+        $('input[name="content_type"]').on('change', toggleContentType);
+    });
+</script>
 @endsection

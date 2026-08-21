@@ -28,5 +28,4 @@ Route::middleware(['auth', 'verified', 'access-sec-panel'])->prefix('sec')->grou
     Route::get('/monthly-configs/{monthlyConfig}/preview', [MonthlyConfigController::class, 'preview'])->name('sec.monthly-configs.preview');
     Route::get('/monthly-configs/{monthlyConfig}/pdf', [MonthlyConfigController::class, 'pdf'])->name('sec.monthly-configs.pdf');
     Route::post('/monthly-configs/upload-image', [MonthlyConfigController::class, 'uploadImage'])->name('sec.monthly-configs.upload-image');
-    
 });

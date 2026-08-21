@@ -36,16 +36,15 @@
 
 <x-adminlte-card title="{{ __('Editar Carta de Contribuição Mensal') }}" theme="primary" icon="fas fa-file-alt" collapsible>
 
-    <form method="POST" action="{{ route('sec.monthly-configs.update', $monthlyConfig->id) }}">
+    <form method="POST" action="{{ route('sec.monthly-configs.update', $monthlyConfig->id) }}" enctype="multipart/form-data">
         @csrf
         @method('PUT')
+
         <div class="row mb-4">
             <div class="col-md-6">
-                <x-adminlte-select name="community_id" label="{{ __('Comunidade') }}" fgroup-class="has-feedback" error-key="community_id" igroup-size="sm" required>
+                <x-adminlte-select name="community_id" id="community_id" label="{{ __('Comunidade') }}" fgroup-class="has-feedback" error-key="community_id" igroup-size="sm" required>
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-building"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-building"></i></div>
                     </x-slot>
                     <option value="">{{ __('Selecione uma Comunidade') }}</option>
                     @foreach($communities as $community)
@@ -56,110 +55,96 @@
                 </x-adminlte-select>
             </div>
             <div class="col-md-6">
-                <x-adminlte-input name="reference_date" label="{{ __('Mês de Referência (mês/ano)') }}" type="month" value="{{ old('reference_date', $monthlyConfig->reference_date->format('Y-m')) }}" fgroup-class="has-feedback" error-key="reference_date" igroup-size="sm" required>
+                <x-adminlte-input name="reference_date" label="{{ __('Mês de Referência (mês/ano)') }}" type="month" value="{{ old('reference_date', \Carbon\Carbon::parse($monthlyConfig->reference_date)->format('Y-m')) }}" fgroup-class="has-feedback" error-key="reference_date" igroup-size="sm" required>
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-calendar-alt"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-calendar-alt"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
         </div>
+
         <div class="row mb-4">
             <div class="col-md-12">
                 <x-adminlte-input name="motto" label="{{ __('Lema Bíblico') }}" value="{{ old('motto', $monthlyConfig->motto) }}" fgroup-class="has-feedback" error-key="motto" igroup-size="sm" required>
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-bible"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-bible"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
         </div>
+
+        <!-- Seletor do Tipo de Conteúdo -->
         <div class="row mb-4">
             <div class="col-md-12">
-                <x-adminlte-text-editor name="observations" label="Observações" maxlength="1500" rows="5" id="observations">
-                    {!! old('observations', $monthlyConfig->observations) !!}
-                </x-adminlte-text-editor>
-                @error('observations')
-                <span class="text-danger">{{ $message }}</span>
-                @enderror
+                <label class="font-weight-bold">{{ __('Tipo de Conteúdo para Observações') }}</label>
+                <div class="d-flex align-items-center">
+                    <div class="custom-control custom-radio mr-4">
+                        <input class="custom-control-input" type="radio" id="type_text" name="content_type" value="text" {{ old('content_type', $monthlyConfig->content_type ?? 'text') == 'text' ? 'checked' : '' }}>
+                        <label for="type_text" class="custom-control-label">{{ __('Texto Personalizado') }}</label>
+                    </div>
+                    <div class="custom-control custom-radio">
+                        <input class="custom-control-input" type="radio" id="type_image" name="content_type" value="image" {{ old('content_type', $monthlyConfig->content_type) == 'image' ? 'checked' : '' }}>
+                        <label for="type_image" class="custom-control-label">{{ __('Imagem / Card Promocional') }}</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bloco de Texto -->
+        <div class="row mb-4" id="text_block">
+            <div class="col-md-12">
+                <x-adminlte-textarea name="observations" label="{{ __('Observações') }}" fgroup-class="has-feedback" error-key="observations" rows="4">
+                    {{ old('observations', $monthlyConfig->observations) }}
+                </x-adminlte-textarea>
+            </div>
+        </div>
+
+        <!-- Bloco de Upload de Imagem -->
+        <div class="row mb-4" id="image_block" style="display: none;">
+            <div class="col-md-12">
+                @if($monthlyConfig->image_path)
+                    <div class="p-3 mb-3 border rounded bg-light">
+                        <label class="d-block text-muted mb-2">{{ __('Imagem Atualmente Cadastrada:') }}</label>
+                        <img src="{{ asset('storage/' . $monthlyConfig->image_path) }}" alt="Preview" class="img-thumbnail shadow-sm" style="max-height: 180px;">
+                    </div>
+                @endif
+
+                <x-adminlte-input-file name="image_file" id="image_file" label="{{ __('Substituir Imagem / Card (Deixe em branco para manter a atual)') }}" placeholder="{{ __('Escolha um novo arquivo...') }}" fgroup-class="has-feedback" error-key="image_file">
+                    <x-slot name="prependSlot">
+                        <div class="input-group-text"><i class="fas fa-upload"></i></div>
+                    </x-slot>
+                </x-adminlte-input-file>
             </div>
         </div>
 
         <div class="row">
             <div class="col-md-12">
-                <x-adminlte-button type="submit" theme="primary" label="{{ __('Salvar') }}" icon="fas fa-save" class="btn-lg mr-2" />
-                <x-adminlte-button theme="secondary" label="{{ __('Voltar') }}" icon="fas fa-arrow-left" class="btn-lg" onclick="window.location='{{ route('sec.monthly-configs.index') }}'" />
+                <x-adminlte-button type="submit" theme="primary" label="{{ __('Salvar Alterações') }}" icon="fas fa-save" class="btn-lg mr-2" />
+                <a href="{{ route('sec.monthly-configs.index') }}" class="btn btn-secondary btn-lg">
+                    <i class="fas fa-arrow-left"></i> {{ __('Voltar') }}
+                </a>
             </div>
         </div>
     </form>
 </x-adminlte-card>
 @endsection
 
-@section('css')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.css">
-@endsection
-
 @section('js')
-<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.js"></script>
 <script>
     $(document).ready(function() {
-        $('#observations').summernote({
-            height: 500,
-            toolbar: [
-                ['style', ['bold', 'italic', 'underline', 'clear']],
-                ['font', ['strikethrough', 'superscript', 'subscript']],
-                ['fontsize', ['fontsize']],
-                ['color', ['color']],
-                ['para', ['ul', 'ol', 'paragraph']],
-                ['height', ['height']],
-                ['table', ['table']],
-                ['insert', ['link', 'picture', 'hr']],
-                ['view', ['fullscreen', 'codeview']],
-            ],
-            maximumImageFileSize: 1024 * 1024, // Limite de 1MB para imagens
-            callbacks: {
-                onImageUpload: function(files) {
-                    if (files[0].size > 1024 * 1024) {
-                        alert('A imagem excede o tamanho máximo de 1MB.');
-                        return;
-                    }
-                    let formData = new FormData();
-                    formData.append('file', files[0]);
-                    $.ajax({
-                        url: '{{ route('sec.monthly-configs.upload-image') }}',
-                        method: 'POST',
-                        data: formData,
-                        contentType: false,
-                        processData: false,
-                        headers: {
-                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                        },
-                        success: function(response) {
-                            $('#observations').summernote('insertImage', response.url);
-                        },
-                        error: function(xhr) {
-                            alert('Erro ao fazer upload da imagem: ' + (xhr.responseJSON?.message || 'Erro desconhecido'));
-                        }
-                    });
-                },
-                onChange: function(contents, $editable) {
-                    // Contar caracteres sem HTML
-                    let plainText = $('<div>').html(contents).text();
-                    if (plainText.length > 1000) {
-                        alert('O texto excede o limite de 1000 caracteres.');
-                        $('#observations').summernote('undo');
-                    }
-                }
+        function toggleContentType() {
+            let selectedType = $('input[name="content_type"]:checked').val();
+            if (selectedType === 'image') {
+                $('#text_block').hide();
+                $('#image_block').show();
+            } else {
+                $('#image_block').hide();
+                $('#text_block').show();
             }
-        });
+        }
 
-        // Debug form submission
-        $('form').on('submit', function() {
-            console.log('Form submitted with community_id:', $('#community_id').val());
-            console.log('Form data:', $(this).serialize());
-        });
+        toggleContentType();
+        $('input[name="content_type"]').on('change', toggleContentType);
     });
 </script>
 @endsection

@@ -17,8 +17,9 @@ class MonthlyConfig extends Model
         'community_id',
         'reference_date',
         'motto',
-        'observations',
+        'content_type',
         'image_path',
+        'observations',
     ];
 
     protected $casts = [

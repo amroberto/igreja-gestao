@@ -3,16 +3,16 @@
 @section('title', 'Configurações Mensais')
 
 @section('content_header')
-    <h1>Configurações Mensais</h1>
+    <h1>Cartas de Contribuição Mensal</h1>
 @endsection
 
 @section('content')
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title">Listagem de Configurações Mensais</h3>
+            <h3 class="card-title">Listagem de Cartas de Contribuição Mensal</h3>
             <div class="card-tools">
                 <a href="{{ route('sec.monthly-configs.create') }}" class="btn btn-primary btn-sm">
-                    <i class="fas fa-plus"></i> Criar Nova Configuração
+                    <i class="fas fa-plus"></i> Criar Nova Carta
                 </a>
             </div>
         </div>
