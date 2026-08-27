@@ -240,8 +240,8 @@
         .instructions-container {
             background: #ffffff;
             border: 1px solid #d9ded9;
-            margin-top: 6px;
-            padding: 12px;
+            margin-top: 10px;
+            padding: 8px;
         }
 
         .instructions-container td {
@@ -577,7 +577,7 @@
                             <div class="bank-details">
                                 <strong>PIX (Chave CNPJ):</strong> 12.345.678/0001-66<br>
                                 <strong>Banco Itaú</strong> | Agência: 1111 | C/C: 11111-1<br>
-                                <strong>Favorecido:</strong> Igreja Evangélica Luterana
+                                <strong>Favorecido:</strong> Igreja Evangélica Luterana de São João
                             </div>
                         </li>
                     </ul>
@@ -610,7 +610,7 @@
     <div class="footer">
         <table class="footer-table">
             <tr>
-                <td>Agradecemos pela sua participação e colaboração. | {{ $documentNumber ?? '000000' }}</td>
+                <td>Agradecemos pela sua participação e colaboração. | Cod:{{ str_pad($member->id ?? 0, 6, '0', STR_PAD_LEFT) }} -- Doc:{{ $documentNumber ?? '000000' }}</td>
                 <td>Ref.: {{ isset($config->reference_date) ? $config->reference_date->format('m/Y') : date('m/Y') }}
                 </td>
             </tr>
