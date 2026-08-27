@@ -26,6 +26,17 @@ class ParochialUnion extends Model
         'website',
         'email',
         'logo',
+        'pix_key',
+        'pix_key_type',
+        'pix_receiver_name',
+        'pix_city',
+        'pix_static_enabled',
+    ];
+
+    protected $casts = [
+        'pix_static_enabled' => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     use HasFactory;
@@ -42,5 +53,25 @@ class ParochialUnion extends Model
     public function getLogoExistsAttribute()
     {
         return $this->logo ? Storage::exists($this->logo) : false;
+    }
+
+    /**
+     * Higieniza a chave PIX antes de salvar no banco de dados.
+     */
+    protected function setPixKeyAttribute($value)
+    {
+        if (empty($value)) {
+            $this->attributes['pix_key'] = null;
+            return;
+        }
+
+        $type = strtolower($this->attributes['pix_key_type'] ?? '');
+
+        // Se for CNPJ ou CPF, salva apenas os dígitos numéricos
+        if (in_array($type, ['cnpj', 'cpf']) || preg_match('/^\d{2,3}\.\d{3}/', $value)) {
+            $this->attributes['pix_key'] = preg_replace('/[^0-9]/', '', $value);
+        } else {
+            $this->attributes['pix_key'] = trim($value);
+        }
     }
 }

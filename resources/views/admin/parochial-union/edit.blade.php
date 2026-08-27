@@ -40,143 +40,180 @@
     <form action="{{ route('admin.parochial-union.update') }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')
+        
         <div class="row">
             <div class="col-md-6">
                 <x-adminlte-input name="corporate_name" label="{{ __('Razão Social') }}" value="{{ old('corporate_name', $union->corporate_name) }}" required fgroup-class="has-feedback" error-key="corporate_name" igroup-size="sm">
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-building"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-building"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
             <div class="col-md-6">
                 <x-adminlte-input name="trade_name" label="{{ __('Nome Fantasia') }}" value="{{ old('trade_name', $union->trade_name) }}" required fgroup-class="has-feedback" error-key="trade_name" igroup-size="sm">
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-store"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-store"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
         </div>
+
         <div class="row">
             <div class="col-md-4">
-                <x-adminlte-input name="cnpj" label="{{ __('CNPJ') }}" value="{{ old('cnpj', $union->cnpj) }}" required fgroup-class="has-feedback" error-key="cnpj" igroup-size="sm">
+                <x-adminlte-input name="cnpj" id="cnpj" label="{{ __('CNPJ') }}" value="{{ old('cnpj', $union->cnpj) }}" required fgroup-class="has-feedback" error-key="cnpj" igroup-size="sm">
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-id-card"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-id-card"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
             <div class="col-md-4">
                 <x-adminlte-input name="email" label="{{ __('E-mail') }}" type="email" value="{{ old('email', $union->email) }}" fgroup-class="has-feedback" error-key="email" igroup-size="sm">
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-envelope"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-envelope"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
             <div class="col-md-4">
                 <x-adminlte-input name="website" label="{{ __('Website') }}" type="url" value="{{ old('website', $union->website) }}" fgroup-class="has-feedback" error-key="website" igroup-size="sm">
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-globe"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-globe"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
-
         </div>
+
         <div class="row">
             <div class="col-md-6">
-                <x-adminlte-input name="phone" label="{{ __('Telefone') }}" value="{{ old('phone', $union->phone) }}" fgroup-class="has-feedback" error-key="phone" igroup-size="sm">
+                <x-adminlte-input name="phone" id="phone" label="{{ __('Telefone') }}" value="{{ old('phone', $union->phone) }}" fgroup-class="has-feedback" error-key="phone" igroup-size="sm">
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-phone"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-phone"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
             <div class="col-md-6">
-                <x-adminlte-input name="cellphone" label="{{ __('Celular/WhatsApp') }}" value="{{ old('cellphone', $union->cellphone) }}" fgroup-class="has-feedback" error-key="cellphone" igroup-size="sm">
+                <x-adminlte-input name="cellphone" id="cellphone" label="{{ __('Celular/WhatsApp') }}" value="{{ old('cellphone', $union->cellphone) }}" fgroup-class="has-feedback" error-key="cellphone" igroup-size="sm">
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fab fa-whatsapp"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fab fa-whatsapp"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
         </div>
+
         <div class="row">
             <div class="col-md-2">
-                <x-adminlte-input name="cep" label="{{ __('CEP') }}" value="{{ old('cep', $union->cep) }}" fgroup-class="has-feedback" error-key="cep" igroup-size="sm">
+                <x-adminlte-input name="cep" id="cep" label="{{ __('CEP') }}" value="{{ old('cep', $union->cep) }}" fgroup-class="has-feedback" error-key="cep" igroup-size="sm">
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-map-marker-alt"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
             <div class="col-md-8">
-                <x-adminlte-input name="address" label="{{ __('Endereço') }}" value="{{ old('address', $union->address) }}" fgroup-class="has-feedback" error-key="address" igroup-size="sm">
+                <x-adminlte-input name="address" id="address" label="{{ __('Endereço') }}" value="{{ old('address', $union->address) }}" fgroup-class="has-feedback" error-key="address" igroup-size="sm">
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-road"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-road"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
             <div class="col-md-2">
                 <x-adminlte-input name="number" label="{{ __('Número') }}" value="{{ old('number', $union->number) }}" fgroup-class="has-feedback" error-key="number" igroup-size="sm">
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-home"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-home"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
         </div>
+
         <div class="row">
             <div class="col-md-3">
                 <x-adminlte-input name="complement" label="{{ __('Complemento') }}" value="{{ old('complement', $union->complement) }}" fgroup-class="has-feedback" error-key="complement" igroup-size="sm">
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-info-circle"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-info-circle"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
             <div class="col-md-3">
-                <x-adminlte-input name="district" label="{{ __('Bairro') }}" value="{{ old('district', $union->district) }}" fgroup-class="has-feedback" error-key="district" igroup-size="sm">
+                <x-adminlte-input name="district" id="district" label="{{ __('Bairro') }}" value="{{ old('district', $union->district) }}" fgroup-class="has-feedback" error-key="district" igroup-size="sm">
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-map"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-map"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
             <div class="col-md-4">
-                <x-adminlte-input name="city" label="{{ __('Cidade') }}" value="{{ old('city', $union->city) }}" fgroup-class="has-feedback" error-key="city" igroup-size="sm">
+                <x-adminlte-input name="city" id="city" label="{{ __('Cidade') }}" value="{{ old('city', $union->city) }}" fgroup-class="has-feedback" error-key="city" igroup-size="sm">
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-city"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-city"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
             <div class="col-md-2">
-                <x-adminlte-input name="state" label="{{ __('Estado') }}" value="{{ old('state', $union->state) }}" fgroup-class="has-feedback" error-key="state" igroup-size="sm">
+                <x-adminlte-input name="state" id="state" label="{{ __('Estado') }}" value="{{ old('state', $union->state) }}" fgroup-class="has-feedback" error-key="state" igroup-size="sm">
                     <x-slot name="prependSlot">
-                        <div class="input-group-text">
-                            <i class="fas fa-flag"></i>
-                        </div>
+                        <div class="input-group-text"><i class="fas fa-flag"></i></div>
                     </x-slot>
                 </x-adminlte-input>
             </div>
         </div>
+
+        {{-- Bloco do Pix Estático --}}
+        <div class="card card-success card-outline">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-qrcode mr-2"></i>
+                    {{ __('Configuração do Pix Estático') }}
+                </h3>
+            </div>
+
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">{{ __('Ativar Pix Estático') }}</label>
+                        <select id="pix_static_enabled" name="pix_static_enabled" class="form-control">
+                            <option value="0" {{ old('pix_static_enabled', $union->pix_static_enabled) == 0 ? 'selected' : '' }}>
+                                {{ __('Não') }}
+                            </option>
+                            <option value="1" {{ old('pix_static_enabled', $union->pix_static_enabled) == 1 ? 'selected' : '' }}>
+                                {{ __('Sim') }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3 mb-3 pix-fields">
+                        <label class="form-label">{{ __('Tipo da Chave Pix') }}</label>
+                        <select name="pix_key_type" id="pix_key_type" class="form-control">
+                            <option value="">{{ __('Selecione') }}</option>
+                            <option value="cnpj" {{ old('pix_key_type', $union->pix_key_type) === 'cnpj' ? 'selected' : '' }}>CNPJ</option>
+                            <option value="cpf" {{ old('pix_key_type', $union->pix_key_type) === 'cpf' ? 'selected' : '' }}>CPF</option>
+                            <option value="email" {{ old('pix_key_type', $union->pix_key_type) === 'email' ? 'selected' : '' }}>E-mail</option>
+                            <option value="phone" {{ old('pix_key_type', $union->pix_key_type) === 'phone' ? 'selected' : '' }}>Telefone</option>
+                            <option value="random" {{ old('pix_key_type', $union->pix_key_type) === 'random' ? 'selected' : '' }}>Chave aleatória</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 mb-3 pix-fields">
+                        <label class="form-label">{{ __('Chave Pix') }}</label>
+                        <input type="text" id="pix_key" name="pix_key"
+                            class="form-control @error('pix_key') is-invalid @enderror"
+                            value="{{ old('pix_key', $union->pix_key) }}"
+                            placeholder="{{ __('Informe a chave Pix da União Paroquial') }}">
+                    </div>
+                </div>
+
+                <div class="row pix-fields">
+                    <div class="col-md-8 mb-3">
+                        <label class="form-label">{{ __('Nome do Recebedor no Pix') }}</label>
+                        <input type="text" name="pix_receiver_name" class="form-control"
+                            value="{{ old('pix_receiver_name', $union->pix_receiver_name ?: $union->trade_name) }}">
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">{{ __('Cidade do Pix') }}</label>
+                        <input type="text" name="pix_city" class="form-control"
+                            value="{{ old('pix_city', $union->pix_city ?: $union->city) }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-md-6">
                 <div class="form-group">
@@ -192,14 +229,13 @@
                     @endif
                     <x-adminlte-input name="logo" label="{{ __('Nova Logo') }}" type="file" accept="image/*" fgroup-class="has-feedback" error-key="logo" igroup-size="sm">
                         <x-slot name="prependSlot">
-                            <div class="input-group-text">
-                                <i class="fas fa-upload"></i>
-                            </div>
+                            <div class="input-group-text"><i class="fas fa-upload"></i></div>
                         </x-slot>
                     </x-adminlte-input>
                 </div>
             </div>
         </div>
+
         <div class="row">
             <div class="col-md-12">
                 <x-adminlte-button type="submit" theme="primary" label="{{ __('Salvar') }}" icon="fas fa-save" class="btn-lg" />
@@ -214,15 +250,9 @@
     .card {
         transition: all 0.3s ease-in-out;
     }
-
     .card:hover {
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
-
-    .form-check {
-        margin-bottom: 0.5rem;
-    }
-
 </style>
 @stop
 
@@ -231,30 +261,52 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
 <script>
     $(document).ready(function() {
-        // Máscaras
+        // Máscaras de campos gerais
         $('#cnpj').mask('00.000.000/0000-00');
-        $('#rg').mask('00.000.000-0');
         $('#phone').mask('(00) 0000-0000');
         $('#cellphone').mask('(00) 00000-0000');
         $('#cep').mask('00000-000');
-        $('#amount').mask('000.000,00', {
-            reverse: true
-        });
 
-        // Validação do CPF
-        $('#cpf').on('blur', function() {
-            const cpf = $(this).val().replace(/\D/g, '');
-            if (cpf.length !== 11) {
-                $(this).addClass('is-invalid');
-                $(this).next('.invalid-feedback').remove();
-                $(this).after('<div class="invalid-feedback">O CPF deve ter 11 dígitos.</div>');
-            } else {
-                $(this).removeClass('is-invalid');
-                $(this).next('.invalid-feedback').remove();
+        function togglePixFields() {
+            $('.pix-fields').toggle($('#pix_static_enabled').val() === '1');
+        }
+
+        function applyPixKeyMask() {
+            const type = $('#pix_key_type').val();
+            const input = $('#pix_key');
+
+            input.unmask();
+            input.attr('placeholder', 'Informe a chave Pix');
+
+            if (type === 'cnpj') {
+                input.mask('00.000.000/0000-00');
+                input.attr('placeholder', '00.000.000/0000-00');
+            } else if (type === 'cpf') {
+                input.mask('000.000.000-00');
+                input.attr('placeholder', '000.000.000-00');
+            } else if (type === 'phone') {
+                input.mask('+55 (00) 00000-0000');
+                input.attr('placeholder', '+55 (11) 99999-9999');
+            } else if (type === 'email') {
+                input.attr('placeholder', 'pix@uniaoparoquial.org.br');
+            } else if (type === 'random') {
+                input.attr('placeholder', 'Chave aleatória do Pix');
             }
+        }
+
+        $('#pix_static_enabled').on('change', togglePixFields);
+
+        // Limpa o valor do Pix KEY apenas se o usuário alterar a seleção manualmente
+        $('#pix_key_type').on('change', function () {
+            $('#pix_key').val('');
+            applyPixKeyMask();
         });
 
-        // ViaCEP
+        // Inicializações na abertura da tela
+        togglePixFields();
+        applyPixKeyMask();
+
+        // Autocorreção e busca ViaCEP
         $('#cep').on('blur', function() {
             const cep = $(this).val().replace(/\D/g, '');
             if (cep.length === 8) {
@@ -268,30 +320,32 @@
                     } else {
                         $('#cep').addClass('is-invalid');
                         $('#cep').next('.invalid-feedback').remove();
-                        $('#cep').after('<div class="invalid-feedback">CEP inválido.</div>');
+                        $('#cep').after('<div class="invalid-feedback">CEP não encontrado.</div>');
                     }
                 }).fail(function() {
                     $('#cep').addClass('is-invalid');
                     $('#cep').next('.invalid-feedback').remove();
                     $('#cep').after('<div class="invalid-feedback">Erro ao consultar CEP.</div>');
                 });
-            } else {
+            } else if(cep.length > 0) {
                 $('#cep').addClass('is-invalid');
                 $('#cep').next('.invalid-feedback').remove();
                 $('#cep').after('<div class="invalid-feedback">CEP deve ter 8 dígitos.</div>');
             }
         });
 
-        // Normalizar campos antes do envio
+        // Normalizar apenas os campos que possuem máscara de fato antes do envio do form
         $('form').on('submit', function() {
-            $('#cpf').val($('#cpf').val().replace(/\D/g, ''));
-            $('#rg').val($('#rg').val().replace(/\D/g, ''));
+            $('#cnpj').val($('#cnpj').val().replace(/\D/g, ''));
             $('#phone').val($('#phone').val().replace(/\D/g, ''));
             $('#cellphone').val($('#cellphone').val().replace(/\D/g, ''));
             $('#cep').val($('#cep').val().replace(/\D/g, ''));
-            $('#amount').val($('#amount').val().replace(/\D/g, '').replace(',', '.'));
+            
+            // Tratamento especial para telefone caso seja a chave Pix
+            if ($('#pix_key_type').val() === 'phone' || $('#pix_key_type').val() === 'cnpj' || $('#pix_key_type').val() === 'cpf') {
+                // Se for número com +55 ou pontuação, limpa se necessário (ou mantém dependendo do backend)
+            }
         });
     });
-
 </script>
 @stop

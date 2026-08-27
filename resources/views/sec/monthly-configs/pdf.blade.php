@@ -21,7 +21,7 @@
             margin: 0;
         }
 
-        .titulo {
+        .title {
             text-align: center;
             font-size: 18px;
             font-weight: bold;
@@ -377,7 +377,7 @@
 
 <body>
 
-    <div class="titulo">
+    <div class="title">
         IGREJA EVANGÉLICA LUTERANA DE SÃO JOÃO
     </div>
     @php
@@ -596,7 +596,7 @@
 
                         <div class="qrcode-badge">
                             <span class="pix-logo-icon">❖</span>
-                            <span>{{ !empty($parish->pix_static_enabled) ? 'ESCANEAR PARA CONTRIBUIR' : 'PIX - QR CODE'
+                            <span>{{ !empty($parochialUnion->pix_static_enabled) ? 'ESCANEAR PARA CONTRIBUIR' : 'PIX - QR CODE'
                                 }}</span>
                         </div>
                     </div>

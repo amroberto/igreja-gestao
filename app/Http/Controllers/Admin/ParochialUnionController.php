@@ -74,6 +74,11 @@ class ParochialUnionController extends Controller
             'website' => 'nullable|url|max:255',
             'email' => 'nullable|email|max:255',
             'logo' => 'nullable|file|mimes:jpg,png|max:2048',
+            'pix_static_enabled' => ['nullable', 'boolean'],
+            'pix_key_type' => ['nullable', 'in:cnpj,cpf,email,phone,random'],
+            'pix_key' => ['nullable', 'string', 'max:100', 'required_if:pix_static_enabled,1'],
+            'pix_receiver_name' => ['nullable', 'string', 'max:50', 'required_if:pix_static_enabled,1'],
+            'pix_city' => ['nullable', 'string', 'max:15', 'required_if:pix_static_enabled,1'],
         ]);
 
         if ($request->hasFile('logo')) {
