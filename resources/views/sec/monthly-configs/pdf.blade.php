@@ -6,7 +6,7 @@
     <title>Informativo Mensal</title>
     <style>
         @page {
-            margin: 20px 25px;
+            margin: 5px 35px;
         }
 
         * {
@@ -19,6 +19,16 @@
             font-size: 10px;
             line-height: 1.45;
             margin: 0;
+        }
+
+        .titulo {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            font-style: italic;
+            margin: 10px 0;
+            padding: 10px 14px;
+            text-align: center;
         }
 
         .header-table,
@@ -49,7 +59,7 @@
 
         .union-cell,
         .parish-cell {
-            text-align: center;
+            text-align: left;
             width: 36%;
         }
 
@@ -144,8 +154,8 @@
         /* Container da Imagem sem esticar */
         .left-content {
             border-right: 0;
-            height: 350px;
-            min-height: 350px;
+            height: 325px;
+            min-height: 325px;
             padding: 0;
             text-align: center;
             vertical-align: middle;
@@ -153,8 +163,8 @@
 
         .right-content {
             border: 1px solid #d9ded9;
-            height: 350px;
-            min-height: 350px;
+            height: 325px;
+            min-height: 325px;
             padding: 8px;
         }
 
@@ -181,7 +191,7 @@
             width: auto !important;
             height: auto !important;
             max-width: 100% !important;
-            max-height: 350px !important;
+            max-height: 330px !important;
             display: inline-block;
             margin: 0 auto;
             border: 1px solid #e1e8e2;
@@ -366,6 +376,10 @@
 </head>
 
 <body>
+
+    <div class="titulo">
+        IGREJA EVANGÉLICA LUTERANA DE SÃO JOÃO
+    </div>
     @php
     // Helper robusto para carregar imagens locais em Base64 no Dompdf
     $logoDataUri = function (?string $path): ?string {
