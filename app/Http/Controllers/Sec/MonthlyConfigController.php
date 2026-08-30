@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Sec;
 
 use App\Helpers\PixHelper;
+use App\Models\Community;
 use App\Models\Contribution;
 use App\Models\MonthlyConfig;
 use App\Models\ParochialUnion;
@@ -80,7 +81,7 @@ class MonthlyConfigController extends Controller
         $monthlyConfig = MonthlyConfig::findOrFail($id);
         $communities = Community::orderBy('name')->get();
 
-        return view('sec.monthly_configs.edit', compact('monthlyConfig', 'communities'));
+        return view('sec.monthly-configs.edit', compact('monthlyConfig', 'communities'));
     }
 
     public function update(Request $request, $id)

@@ -2,6 +2,9 @@
 
 @section('title', __('Criar Configuração - Carta de Contribuição Mensal'))
 
+{{-- Importa os recursos do Summernote via CDN --}}
+@section('plugins.Summernote', true)
+
 @section('content_header')
 <div class="container-fluid">
     <div class="row mb-2">
@@ -82,12 +85,11 @@
             </div>
         </div>
 
-        <!-- Bloco de Texto -->
+        <!-- Bloco de Texto Formatável (Summernote) -->
         <div class="row mb-4" id="text_block">
             <div class="col-md-12">
-                <x-adminlte-textarea name="observations" label="{{ __('Observações') }}" fgroup-class="has-feedback" error-key="observations" rows="4">
-                    {{ old('observations', 'A contribuição proporcional é minha oferta de gratidão à igreja.') }}
-                </x-adminlte-textarea>
+                <label for="observations" class="font-weight-bold">{{ __('Observações') }}</label>
+                <textarea name="observations" id="observations" class="form-control summernote">{{ old('observations', 'A contribuição proporcional é minha oferta de gratidão à igreja.') }}</textarea>
             </div>
         </div>
 
@@ -115,8 +117,23 @@
 @endsection
 
 @section('js')
+<!-- CDN de suporte ao Summernote caso o plugin adminlte não esteja mapeado -->
+<link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.js"></script>
+
 <script>
     $(document).ready(function() {
+        // Inicializa o Editor Rich-Text com barra de ferramentas simplificada
+        $('#observations').summernote({
+            height: 150,
+            toolbar: [
+                ['style', ['bold', 'italic', 'underline', 'clear']],
+                ['font', ['strikethrough']],
+                ['para', ['ul', 'ol', 'paragraph']],
+                ['misc', ['undo', 'redo']]
+            ]
+        });
+
         function toggleContentType() {
             let selectedType = $('input[name="content_type"]:checked').val();
             if (selectedType === 'image') {
@@ -128,7 +145,6 @@
             }
         }
 
-        // Aplica na montagem inicial e ao alternar
         toggleContentType();
         $('input[name="content_type"]').on('change', toggleContentType);
     });

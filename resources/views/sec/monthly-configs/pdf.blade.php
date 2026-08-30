@@ -95,16 +95,18 @@
             background: #f4f7f3;
             border-left: 4px solid #174a3a;
             color: #174a3a;
-            font-size: 11px;
+            font-size: 10px;
+            height: 16px;
+            line-height: 16px;
             font-style: italic;
-            margin: 12px 0;
-            padding: 10px 14px;
+            margin: 10px 0;
+            padding: 8px 10px;
             text-align: center;
         }
 
         .mailing-address {
             background: #ffffff;
-            font-size: 11px;
+            font-size: 10px;
             margin: 12px 0;
             min-height: 85px;
             padding: 12px 16px;
@@ -136,6 +138,7 @@
 
         .content-table {
             margin-bottom: 12px;
+            page-break-inside: avoid;
         }
 
         .content-table td {
@@ -242,6 +245,7 @@
             border: 1px solid #d9ded9;
             margin-top: 10px;
             padding: 8px;
+            page-break-inside: avoid;
         }
 
         .instructions-container td {
@@ -367,6 +371,7 @@
             font-size: 8px;
             margin-top: 14px;
             padding-top: 8px;
+            page-break-inside: avoid;
         }
 
         .footer-table td:last-child {
@@ -509,8 +514,8 @@
                     <img src="{{ $cardImageSrc }}" class="card-image-pdf" alt="Informativo / Evento">
                     @else
                     <div style="padding: 8px; text-align: left;">
-                        {!! $config->observations ?? 'A contribuição proporcional é minha oferta de gratidão à igreja.'
-                        !!}
+                        {!! !empty($config->observations) ? $config->observations : 'A contribuição proporcional é minha
+                        oferta de gratidão à igreja.' !!}
                     </div>
                     @endif
                 </div>
@@ -596,7 +601,8 @@
 
                         <div class="qrcode-badge">
                             <span class="pix-logo-icon">❖</span>
-                            <span>{{ !empty($parochialUnion->pix_static_enabled) ? 'ESCANEAR PARA CONTRIBUIR' : 'PIX - QR CODE'
+                            <span>{{ !empty($parochialUnion->pix_static_enabled) ? 'ESCANEAR PARA CONTRIBUIR' : 'PIX -
+                                QR CODE'
                                 }}</span>
                         </div>
                     </div>
@@ -610,7 +616,8 @@
     <div class="footer">
         <table class="footer-table">
             <tr>
-                <td>Agradecemos pela sua participação e colaboração. | Cod:{{ str_pad($member->id ?? 0, 6, '0', STR_PAD_LEFT) }} -- Doc:{{ $documentNumber ?? '000000' }}</td>
+                <td>Agradecemos pela sua participação e colaboração. | Cod:{{ str_pad($member->id ?? 0, 6, '0',
+                    STR_PAD_LEFT) }} -- Doc:{{ $documentNumber ?? '000000' }}</td>
                 <td>Ref.: {{ isset($config->reference_date) ? $config->reference_date->format('m/Y') : date('m/Y') }}
                 </td>
             </tr>

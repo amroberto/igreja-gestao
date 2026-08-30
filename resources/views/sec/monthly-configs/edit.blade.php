@@ -18,12 +18,6 @@
 
 @section('content')
 
-@if (session('success'))
-<x-adminlte-alert theme="success" title="{{ __('Sucesso') }}" icon="fas fa-check-circle" dismissable>
-    {{ session('success') }}
-</x-adminlte-alert>
-@endif
-
 @if ($errors->any())
 <x-adminlte-alert theme="danger" title="{{ __('Erros de Validação') }}" icon="fas fa-exclamation-triangle" dismissable>
     <ul class="mb-0">
@@ -79,41 +73,40 @@
                 <label class="font-weight-bold">{{ __('Tipo de Conteúdo para Observações') }}</label>
                 <div class="d-flex align-items-center">
                     <div class="custom-control custom-radio mr-4">
-                        <input class="custom-control-input" type="radio" id="type_text" name="content_type" value="text" {{ old('content_type', $monthlyConfig->content_type ?? 'text') == 'text' ? 'checked' : '' }}>
+                        <input class="custom-control-input" type="radio" id="type_text" name="content_type" value="text" {{ old('content_type', $monthlyConfig->card_image_path ? 'image' : 'text') == 'text' ? 'checked' : '' }}>
                         <label for="type_text" class="custom-control-label">{{ __('Texto Personalizado') }}</label>
                     </div>
                     <div class="custom-control custom-radio">
-                        <input class="custom-control-input" type="radio" id="type_image" name="content_type" value="image" {{ old('content_type', $monthlyConfig->content_type) == 'image' ? 'checked' : '' }}>
+                        <input class="custom-control-input" type="radio" id="type_image" name="content_type" value="image" {{ old('content_type', $monthlyConfig->card_image_path ? 'image' : 'text') == 'image' ? 'checked' : '' }}>
                         <label for="type_image" class="custom-control-label">{{ __('Imagem / Card Promocional') }}</label>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Bloco de Texto -->
+        <!-- Bloco de Texto Formatável (Summernote) -->
         <div class="row mb-4" id="text_block">
             <div class="col-md-12">
-                <x-adminlte-textarea name="observations" label="{{ __('Observações') }}" fgroup-class="has-feedback" error-key="observations" rows="4">
-                    {{ old('observations', $monthlyConfig->observations) }}
-                </x-adminlte-textarea>
+                <label for="observations" class="font-weight-bold">{{ __('Observações') }}</label>
+                <textarea name="observations" id="observations" class="form-control summernote">{{ old('observations', $monthlyConfig->observations) }}</textarea>
             </div>
         </div>
 
         <!-- Bloco de Upload de Imagem -->
         <div class="row mb-4" id="image_block" style="display: none;">
             <div class="col-md-12">
-                @if($monthlyConfig->image_path)
-                    <div class="p-3 mb-3 border rounded bg-light">
-                        <label class="d-block text-muted mb-2">{{ __('Imagem Atualmente Cadastrada:') }}</label>
-                        <img src="{{ asset('storage/' . $monthlyConfig->image_path) }}" alt="Preview" class="img-thumbnail shadow-sm" style="max-height: 180px;">
-                    </div>
-                @endif
-
-                <x-adminlte-input-file name="image_file" id="image_file" label="{{ __('Substituir Imagem / Card (Deixe em branco para manter a atual)') }}" placeholder="{{ __('Escolha um novo arquivo...') }}" fgroup-class="has-feedback" error-key="image_file">
+                <x-adminlte-input-file name="image_file" id="image_file" label="{{ __('Imagem ou Card (PNG, JPG, WEBP - máx 2MB)') }}" placeholder="{{ __('Escolha uma nova imagem para substituir...') }}" fgroup-class="has-feedback" error-key="image_file">
                     <x-slot name="prependSlot">
-                        <div class="input-group-text"><i class="fas fa-upload"></i></div>
+                        <div class="input-group-text"><i class="fas fa-image"></i></div>
                     </x-slot>
                 </x-adminlte-input-file>
+
+                @if($monthlyConfig->card_image_path)
+                <div class="mt-2">
+                    <label class="d-block">{{ __('Imagem Atual:') }}</label>
+                    <img src="{{ Storage::url($monthlyConfig->card_image_path) }}" alt="Card Atual" class="img-thumbnail" style="max-height: 150px;">
+                </div>
+                @endif
             </div>
         </div>
 
@@ -130,8 +123,23 @@
 @endsection
 
 @section('js')
+<!-- CDN de suporte ao Summernote caso o plugin adminlte não esteja mapeado -->
+<link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.js"></script>
+
 <script>
     $(document).ready(function() {
+        // Inicializa o Editor Rich-Text com barra de ferramentas simplificada
+        $('#observations').summernote({
+            height: 150,
+            toolbar: [
+                ['style', ['bold', 'italic', 'underline', 'clear']],
+                ['font', ['strikethrough']],
+                ['para', ['ul', 'ol', 'paragraph']],
+                ['misc', ['undo', 'redo']]
+            ]
+        });
+
         function toggleContentType() {
             let selectedType = $('input[name="content_type"]:checked').val();
             if (selectedType === 'image') {
