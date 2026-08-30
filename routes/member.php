@@ -9,6 +9,10 @@ Route::middleware(['auth', 'verified'])->prefix('member')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('member.dashboard');
     Route::get('/profile', [MemberProfileController::class, 'edit'])->name('member.profile.edit');
     Route::put('/profile', [MemberProfileController::class, 'update'])->name('member.profile.update');
+    
+    // Rota para a popup do PIX (Adicionada aqui)
+    Route::get('/contributions/{contribution}/pix', [ContributionController::class, 'showPix'])->name('member.contributions.pix');
+    
     Route::resource('contributions', ContributionController::class)->names('member.contributions')->only(['index', 'create', 'store', 'edit', 'update']);
     Route::resource('credit-cards', CreditCardController::class)->names('credit-cards');
     Route::post('/member/credit-cards', [ContributionController::class, 'storeCreditCard'])->name('member.credit-cards.store');

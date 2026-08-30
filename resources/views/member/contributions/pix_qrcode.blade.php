@@ -1,24 +1,27 @@
-@extends('layouts.simple') {{-- Use um layout básico, sem menu, para popup --}}
+<div class="text-center py-2">
+    <p class="mb-3">Escaneie o QR Code abaixo com o aplicativo do seu banco:</p>
 
-@section('title', 'Código Pix')
-
-@section('content')
-<div class="container text-center py-4">
-    <h4>Código Pix para pagamento</h4>
-    <p class="mb-3">Use o QR Code abaixo para pagar via Pix</p>
-
-    {{-- Supondo que $pixCode é uma string com o código Pix (string para leitura QR) --}}
     @if(!empty($pixCode))
-        <div class="mb-4">
-            {{-- Gerar QR code com o pacote simples-qrcode --}}
-            {!! \SimpleSoftwareIO\QrCode\Facades\QrCode::size(250)->generate($pixCode) !!}
+        <div class="d-flex justify-content-center mb-4">
+            {!! \SimpleSoftwareIO\QrCode\Facades\QrCode::size(220)->generate($pixCode) !!}
         </div>
 
-        <p><small>Código Pix:</small><br> <code>{{ $pixCode }}</code></p>
+        <div class="bg-light p-3 rounded">
+            <label for="modal-pix-input" class="form-label fw-bold">Código PIX (Copia e Cola):</label>
+            <div class="input-group">
+                <input type="text" id="modal-pix-input" class="form-control text-center" value="{{ $pixCode }}" readonly>
+                <button class="btn btn-outline-primary" type="button" onclick="
+                    const input = document.getElementById('modal-pix-input');
+                    input.select();
+                    navigator.clipboard.writeText(input.value).then(() => alert('Código PIX copiado!'));
+                ">
+                    <i class="bi bi-clipboard"></i> Copiar
+                </button>
+            </div>
+        </div>
     @else
-        <div class="alert alert-danger">Não foi possível gerar o código Pix.</div>
+        <div class="alert alert-warning mb-0">
+            Código PIX indisponível para esta contribuição.
+        </div>
     @endif
-
-    <button class="btn btn-primary mt-3" onclick="window.close()">Fechar</button>
 </div>
-@endsection

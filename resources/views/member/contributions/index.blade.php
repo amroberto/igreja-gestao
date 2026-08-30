@@ -37,132 +37,125 @@
                         </thead>
                         <tbody>
                             @foreach ($contributions as $contribution)
+                            @php
+                                $method = is_object($contribution->payment_method) 
+                                    ? strtolower($contribution->payment_method->value ?? $contribution->payment_method->name ?? '') 
+                                    : strtolower($contribution->payment_method);
+                                
+                                $pixPayload = $contribution->asaas_pix_payload ?? $contribution->asaas_pix_qr_code;
+                            @endphp
                             <tr>
                                 <td>{{ $contribution->created_at->format('d/m/Y') }}</td>
-                                <td>{{ $contribution->community->name }}</td>
-                                <td>{{ $contribution->payment_method->label() }}</td>
+                                <td>{{ $contribution->community->name ?? '-' }}</td>
+                                <td>{{ is_object($contribution->payment_method) && method_exists($contribution->payment_method, 'label') ? $contribution->payment_method->label() : $contribution->payment_method }}</td>
                                 <td>{{ $contribution->period }}</td>
                                 <td>R$ {{ number_format($contribution->amount, 2, ',', '.') }}</td>
                                 <td>
                                     @php
-                                    $status = strtolower($contribution->status->value);
+                                        $status = is_object($contribution->status) ? strtolower($contribution->status->value) : strtolower($contribution->status);
                                     @endphp
-                                    @if ($status === 'confirmed')
-                                    <span class="badge bg-success">Pago</span>
+                                    @if ($status === 'confirmed' || $contribution->is_paid)
+                                        <span class="badge bg-success">Pago</span>
                                     @elseif ($status === 'pending')
-                                    <span class="badge bg-warning">Pendente</span>
+                                        <span class="badge bg-warning text-dark">Pendente</span>
                                     @elseif ($status === 'failed')
-                                    <span class="badge bg-info">Falhou</span>
+                                        <span class="badge bg-info">Falhou</span>
                                     @elseif ($status === 'canceled')
-                                    <span class="badge bg-danger">Cancelado</span>
+                                        <span class="badge bg-danger">Cancelado</span>
                                     @else
-                                    <span class="badge bg-secondary">{{ $contribution->status ?? 'Desconhecido' }}</span>
+                                        <span class="badge bg-secondary">{{ $contribution->status ?? 'Desconhecido' }}</span>
                                     @endif
                                 </td>
                                 <td>
-                                    @if ($contribution->asaas_boleto_url && $contribution->status->value === 'pending' && $contribution->payment_method->value === 'boleto_bancario')
-                                    <a href="{{ $contribution->asaas_boleto_url }}" class="btn btn-sm btn-danger" target="_blank">
-                                        <i class="bi bi-file-earmark-pdf"></i> Visualizar Boleto
-                                    </a>
+                                    {{-- Botão Boleto --}}
+                                    @if (str_contains($method, 'boleto') || $contribution->asaas_boleto_url)
+                                        @if($contribution->asaas_boleto_url)
+                                        <a href="{{ $contribution->asaas_boleto_url }}" class="btn btn-sm btn-danger me-1" target="_blank">
+                                            <i class="bi bi-file-earmark-pdf"></i> Visualizar Boleto
+                                        </a>
+                                        @endif
                                     @endif
-                                    @if ($contribution->asaas_pix_qr_code && $contribution->status->value === 'pending' && $contribution->payment_method->value === 'pix')
-                                    <button class="btn btn-sm btn-success" onclick="showPixWindow('{{ $contribution->asaas_pix_qr_code }}', '{{ $contribution->asaas_pix_payload }}')">
+
+                                    {{-- Botão PIX --}}
+                                    @if (str_contains($method, 'pix'))
+                                    <button type="button" 
+                                            class="btn btn-sm btn-success" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#pixModal{{ $contribution->id }}">
                                         <i class="bi bi-qr-code"></i> Visualizar PIX
                                     </button>
+
+                                    <!-- Modal PIX individual -->
+                                    <div class="modal fade" id="pixModal{{ $contribution->id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Pagamento via PIX</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body text-center py-4">
+                                                    <p class="mb-3">Escaneie o QR Code abaixo com o aplicativo do seu banco:</p>
+                                                    
+                                                    <div class="d-flex justify-content-center mb-4">
+                                                        @if(!empty($pixPayload))
+                                                            @if(str_starts_with($pixPayload, 'data:image') || strlen($pixPayload) > 500)
+                                                                {{-- Se for imagem Base64 vinda do Asaas --}}
+                                                                <img src="{{ str_starts_with($pixPayload, 'data:') ? $pixPayload : 'data:image/png;base64,' . $pixPayload }}" alt="QR Code PIX" style="max-width: 220px;" class="img-fluid border p-2 rounded">
+                                                            @else
+                                                                {{-- Gera o QR Code visual dinamicamente via API confiável sem usar lib PHP --}}
+                                                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={{ urlencode($pixPayload) }}" alt="QR Code PIX" style="max-width: 220px; width: 220px; height: 220px;" class="img-fluid border p-2 rounded">
+                                                            @endif
+                                                        @else
+                                                            <div class="alert alert-warning mb-0">Código PIX indisponível.</div>
+                                                        @endif
+                                                    </div>
+
+                                                    <div class="bg-light p-3 rounded">
+                                                        <label for="pix-input-{{ $contribution->id }}" class="form-label fw-bold">Código PIX (Copia e Cola):</label>
+                                                        <div class="input-group">
+                                                            <input type="text" id="pix-input-{{ $contribution->id }}" class="form-control text-center" value="{{ $pixPayload }}" readonly>
+                                                            <button class="btn btn-outline-primary" type="button" onclick="copyPix('pix-input-{{ $contribution->id }}')">
+                                                                <i class="bi bi-clipboard"></i> Copiar
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer justify-content-center">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                     @endif
                                 </td>
                             </tr>
                             @endforeach
                         </tbody>
-                        {{ $contributions->links() }}
                     </table>
+                    <div class="d-flex justify-content-center">
+                        {{ $contributions->links() }}
+                    </div>
                     @endif
                 </div>
             </div>
         </div>
     </div>
 </div>
+@endsection
 
-@section('scripts')
+@push('scripts')
 <script>
-function showPixWindow(qrCode, payload) {
-    // Calcular posição para centralizar a janela
-    const width = 400;
-    const height = 600;
-    const left = (screen.width - width) / 2;
-    const top = (screen.height - height) / 2;
-    const pixWindow = window.open('', '_blank', `width=${width},height=${height},left=${left},top=${top}`);
-    pixWindow.document.write(`
-        <html>
-            <head>
-                <title>QR Code PIX</title>
-                <style>
-                    body {
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        min-height: 100vh;
-                        margin: 0;
-                        background: #f0f0f0;
-                        font-family: Arial, sans-serif;
-                        text-align: center;
-                    }
-                    .container {
-                        padding: 20px;
-                        background: white;
-                        border-radius: 8px;
-                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-                        max-width: 360px;
-                        width: 100%;
-                    }
-                    img {
-                        max-width: 300px;
-                        max-height: 300px;
-                        margin-bottom: 20px;
-                    }
-                    .copy-paste {
-                        margin-top: 10px;
-                        padding: 10px;
-                        background: #fff;
-                        border: 1px solid #ccc;
-                        border-radius: 5px;
-                    }
-                    .copy-paste input {
-                        width: 100%;
-                        padding: 8px;
-                        margin-bottom: 10px;
-                        font-size: 14px;
-                        border: 1px solid #ccc;
-                        border-radius: 4px;
-                    }
-                    .copy-paste button {
-                        padding: 8px 16px;
-                        background: #007bff;
-                        color: #fff;
-                        border: none;
-                        border-radius: 5px;
-                        cursor: pointer;
-                    }
-                    .copy-paste button:hover {
-                        background: #0056b3;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h3>Contribuição via PIX</h3>
-                    <img src="data:image/png;base64,${qrCode}" alt="QR Code PIX">
-                    <div class="copy-paste">
-                        <p><strong>Código PIX (Copia e Cola):</strong></p>
-                        <input type="text" value="${payload}" readonly>
-                        <button onclick="navigator.clipboard.writeText(this.previousElementSibling.value).then(() => alert('Código copiado!'))">Copiar</button>
-                    </div>
-                </div>
-            </body>
-        </html>
-    `);
-    pixWindow.document.close();
+function copyPix(inputId) {
+    const pixInput = document.getElementById(inputId);
+    pixInput.select();
+    pixInput.setSelectionRange(0, 99999);
+    
+    navigator.clipboard.writeText(pixInput.value).then(() => {
+        alert('Código PIX copiado com sucesso!');
+    }).catch(() => {
+        document.execCommand('copy');
+        alert('Código PIX copiado!');
+    });
 }
 </script>
-@endsection
-@endsection
+@endpush

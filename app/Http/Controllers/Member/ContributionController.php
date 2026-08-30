@@ -60,7 +60,7 @@ class ContributionController extends Controller
         return view('member.contributions.create', compact('member', 'communities'));
     }
 
-public function store(Request $request)
+    public function store(Request $request)
     {
         try {
             // Validação dos dados
@@ -212,5 +212,18 @@ public function store(Request $request)
                 'message' => 'Erro ao criar contribuição: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function showPix(Contribution $contribution)
+    {
+        // Garante que o usuário só veja o PIX da própria contribuição
+        if ($contribution->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $pixCode = $contribution->asaas_pix_qr_code;
+        $pixPayload = $contribution->asaas_pix_payload;
+
+        return view('member.contributions.pix', compact('contribution', 'pixCode', 'pixPayload'));
     }
 }
