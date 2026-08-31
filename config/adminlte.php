@@ -446,6 +446,18 @@ return [
             'url' => '#',
             'submenu' => [
                 [
+                    'text' => 'Relatório Geral de Membros',
+                    'url'  => 'sec/reports/members',
+                    'icon' => 'fas fa-users',
+                    'can'  => 'access-sec-panel',
+                ],
+                [
+                    'text' => 'Relatório Geral de Membros',
+                    'url'  => 'admin/reports/members',
+                    'icon' => 'fas fa-users',
+                    'can'  => 'access-admin-panel',
+                ],
+                [
                     'text' => 'Contribuições por Entidade Financeira',
                     'url'  => 'sec/contributions/report/by-financial-entity',
                     'icon' => 'fas fa-file-pdf',

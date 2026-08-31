@@ -12,103 +12,48 @@ enum DeliveryMethodEnum: string
 
     public static function getValues(): array
     {
-        return array_map(fn(self $case) => $case->value, self::cases());
+        return array_column(self::cases(), 'value');
     }
 
-    public function value(): string
+    /**
+     * Rótulo amigável em português para exibição em Views, PDFs e relatórios Excel.
+     */
+    public function label(): string
     {
         return match ($this) {
             self::EMAIL => 'E-mail',
             self::SMS => 'SMS',
             self::WHATSAPP => 'WhatsApp',
-            self::CORREIO => 'Correio',
+            self::CORREIO => 'Correio / Postal',
             self::ONLINE => 'On-line',
         };
     }
-    public function label(): string
-    {
-        return match ($this) {
-            self::EMAIL => 'Email',
-            self::SMS => 'SMS',
-            self::WHATSAPP => 'WhatsApp',
-            self::CORREIO => 'Correio',
-            self::ONLINE => 'Online',
-        };
-    }
-    public function icon(): string
-    {
-        return match ($this) {
-            self::EMAIL => 'envelope',
-            self::SMS => 'mobile-alt',
-            self::WHATSAPP => 'whatsapp',
-            self::CORREIO => 'mail-bulk',
-            self::ONLINE => 'laptop-code',
-        };
-    }
-    public function color(): string
-    {
-        return match ($this) {
-            self::EMAIL => 'text-blue-500',
-            self::SMS => 'text-green-500',
-            self::WHATSAPP => 'text-green-600',
-            self::CORREIO => 'text-red-500',
-            self::ONLINE => 'text-gray-500',
-        };
-    }
 
-    public function iconColor(): string
-    {
-        return match ($this) {
-            self::EMAIL => 'text-blue-500',
-            self::SMS => 'text-green-500',
-            self::WHATSAPP => 'text-green-600',
-            self::CORREIO => 'text-red-500',
-            self::ONLINE => 'text-gray-500',
-        };
-    }
-
-    public function iconSize(): string
-    {
-        return match ($this) {
-            self::EMAIL => 'text-2xl',
-            self::SMS => 'text-2xl',
-            self::WHATSAPP => 'text-2xl',
-            self::CORREIO => 'text-2xl',
-            self::ONLINE => 'text-2xl',
-        };
-    }
-
+    /**
+     * Classe de ícone FontAwesome para o AdminLTE.
+     */
     public function iconClass(): string
     {
         return match ($this) {
-            self::EMAIL => 'fa-solid fa-envelope',
-            self::SMS => 'fa-solid fa-mobile-alt',
-            self::WHATSAPP => 'fa-brands fa-whatsapp',
-            self::CORREIO => 'fa-solid fa-mail-bulk',
-            self::ONLINE => 'fa-solid fa-laptop-code',
+            self::EMAIL => 'fas fa-envelope',
+            self::SMS => 'fas fa-mobile-alt',
+            self::WHATSAPP => 'fab fa-whatsapp',
+            self::CORREIO => 'fas fa-mail-bulk',
+            self::ONLINE => 'fas fa-laptop-code',
         };
     }
 
-    public function iconSizeClass(): string
+    /**
+     * Cor da badge / contexto compatível com Bootstrap / AdminLTE.
+     */
+    public function badgeColor(): string
     {
         return match ($this) {
-            self::EMAIL => 'text-2xl',
-            self::SMS => 'text-2xl',
-            self::WHATSAPP => 'text-2xl',
-            self::CORREIO => 'text-2xl',
-            self::ONLINE => 'text-2xl',
+            self::EMAIL => 'info',
+            self::SMS => 'warning',
+            self::WHATSAPP => 'success',
+            self::CORREIO => 'danger',
+            self::ONLINE => 'secondary',
         };
     }
-
-    public function iconColorClass(): string
-    {
-        return match ($this) {
-            self::EMAIL => 'text-blue-500',
-            self::SMS => 'text-green-500',
-            self::WHATSAPP => 'text-green-600',
-            self::CORREIO => 'text-red-500',
-            self::ONLINE => 'text-gray-500',
-        };
-    }
-
 }

@@ -8,18 +8,20 @@ use App\Enums\DeliveryMethodEnum;
 use App\Enums\PaymentMethodEnum;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Enum;
 
 class UpdateMemberRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return Auth::check(); // Autorização tratada no controller
+        return Auth::check(); // Autorização tratada no controller ou política
     }
 
     public function rules(): array
     {
-        $memberId = $this->route('member')->id;
+        // Trata o parâmetro da rota de forma segura caso seja o objeto ou apenas o ID
+        $member = $this->route('member');
+        $memberId = is_object($member) ? $member->id : $member;
 
         return [
             'first_name' => ['required', 'string', 'max:255'],
@@ -28,7 +30,7 @@ class UpdateMemberRequest extends FormRequest
             'cpf' => ['required', 'digits:11', 'unique:members,cpf,' . $memberId],
             'rg' => ['nullable', 'string', 'max:20'],
             'birth_date' => ['nullable', 'date', 'before:today'],
-            'gender' => ['nullable', Rule::in(GenderEnum::getValues())],
+            'gender' => ['nullable', new Enum(GenderEnum::class)],
             'community_id' => ['required', 'exists:communities,id'],
             'phone' => ['nullable', 'string', 'max:15'],
             'cellphone' => ['nullable', 'string', 'max:15'],
@@ -44,11 +46,11 @@ class UpdateMemberRequest extends FormRequest
             'district' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:255'],
             'state' => ['nullable', 'string', 'max:2'],
-            'marital_status' => ['nullable', Rule::in(MaritalStatusEnum::getValues())],
+            'marital_status' => ['nullable', new Enum(MaritalStatusEnum::class)],
             'father_name' => ['nullable', 'string', 'max:255'],
             'mother_name' => ['nullable', 'string', 'max:255'],
-            'delivery_method' => ['required', Rule::in(DeliveryMethodEnum::getValues())],
-            'payment_method' => ['required', Rule::in(PaymentMethodEnum::getValues())],
+            'delivery_method' => ['required', new Enum(DeliveryMethodEnum::class)],
+            'payment_method' => ['required', new Enum(PaymentMethodEnum::class)],
             'due_day' => ['required', 'integer', 'between:1,31'],
             'amount' => ['nullable', 'numeric', 'min:0'],
             'is_active' => ['required', 'boolean'],
@@ -71,27 +73,34 @@ class UpdateMemberRequest extends FormRequest
             'amount.numeric' => 'O valor deve ser um número.',
             'amount.min' => 'O valor não pode ser negativo.',
             'delivery_method.required' => 'O método de entrega é obrigatório.',
-            'delivery_method.in' => 'O método de entrega selecionado é inválido.',
+            'delivery_method.enum' => 'O método de entrega selecionado é inválido.',
             'payment_method.required' => 'O método de pagamento é obrigatório.',
-            'payment_method.in' => 'O método de pagamento selecionado é inválido.',
+            'payment_method.enum' => 'O método de pagamento selecionado é inválido.',
+            'marital_status.enum' => 'O estado civil selecionado é inválido.',
+            'gender.enum' => 'O gênero selecionado é inválido.',
             'is_active.required' => 'O status de ativo é obrigatório.',
             'is_contributor.required' => 'O status de contribuinte é obrigatório.',
         ];
     }
 
-    protected function prepareForValidation()
+    protected function prepareForValidation(): void
     {
+        $cpf = preg_replace('/\D/', '', $this->input('cpf', ''));
+        $cep = preg_replace('/\D/', '', $this->input('cep', ''));
+        $phone = preg_replace('/\D/', '', $this->input('phone', ''));
+        $cellphone = preg_replace('/\D/', '', $this->input('cellphone', ''));
+
         $this->merge([
-            'cpf' => preg_replace('/\D/', '', $this->input('cpf', '')),
-            'cep' => preg_replace('/\D/', '', $this->input('cep', '')),
-            'phone' => preg_replace('/\D/', '', $this->input('phone', '')),
-            'cellphone' => preg_replace('/\D/', '', $this->input('cellphone', '')),
+            'cpf' => $cpf ?: null,
+            'cep' => $cep ?: null,
+            'phone' => $phone ?: null,
+            'cellphone' => $cellphone ?: null,
             'amount' => $this->normalizeAmount($this->input('amount', '')),
         ]);
     }
 
     /**
-     * Normaliza o valor monetário para formato numérico.
+     * Normaliza o valor monetário para formato numérico float.
      */
     private function normalizeAmount($amount): ?float
     {
@@ -99,9 +108,14 @@ class UpdateMemberRequest extends FormRequest
             return null;
         }
 
+        // Se já for numérico (ex: 150.00)
+        if (is_numeric($amount)) {
+            return (float) $amount;
+        }
+
         // Remove caracteres não numéricos, exceto vírgula e ponto
         $amount = preg_replace('/[^0-9,.]/', '', $amount);
-        // Converte formato brasileiro (ex.: 1.000,00) para float
+        // Converte formato brasileiro (ex.: 1.000,00 -> 1000.00)
         $amount = str_replace(['.', ','], ['', '.'], $amount);
 
         return is_numeric($amount) ? (float) $amount : null;

@@ -5,6 +5,7 @@ use App\Http\Controllers\Sec\MemberController;
 use App\Http\Controllers\Sec\DashboardController;
 use App\Http\Controllers\Sec\ContributionController;
 use App\Http\Controllers\Sec\MonthlyConfigController;
+use App\Http\Controllers\Sec\MemberReportController;
 
 Route::middleware(['auth', 'verified', 'access-sec-panel'])->prefix('sec')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('sec.dashboard');
@@ -40,4 +41,11 @@ Route::middleware(['auth', 'verified', 'access-sec-panel'])->prefix('sec')->grou
     Route::get('/monthly-configs/{monthlyConfig}/preview', [MonthlyConfigController::class, 'preview'])->name('sec.monthly-configs.preview');
     Route::get('/monthly-configs/{monthlyConfig}/pdf', [MonthlyConfigController::class, 'pdf'])->name('sec.monthly-configs.pdf');
     Route::post('/monthly-configs/upload-image', [MonthlyConfigController::class, 'uploadImage'])->name('sec.monthly-configs.upload-image');
+
+    // Relatórios de Membros
+    Route::prefix('reports/members')->name('sec.reports.members.')->group(function () {
+        Route::get('/', [MemberReportController::class, 'index'])->name('index');
+        Route::get('/pdf', [MemberReportController::class, 'exportPdf'])->name('pdf');
+        Route::get('/excel', [MemberReportController::class, 'exportExcel'])->name('excel');
+    });
 });

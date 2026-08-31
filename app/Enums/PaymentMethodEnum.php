@@ -9,22 +9,10 @@ enum PaymentMethodEnum: string
     case BankSlip = 'boleto_bancario';
     case Pix = 'pix';
     case Cash = 'cash';
-
     case BankCheck = 'bank_check';
     case BankTransfer = 'transf_bancaria';
 
-    public static function values(): array
-    {
-        return array_map(fn($case) => $case->value, self::cases());
-    }
-
-    // Método para obter os valores
-    public static function getValues(): array
-    {
-        return array_column(self::cases(), 'value');
-    }
-
-    // Método para obter o rótulo amigável
+    // Rótulo legível para exibição
     public function label(): string
     {
         return match ($this) {
@@ -38,16 +26,13 @@ enum PaymentMethodEnum: string
         };
     }
 
-    public function getLabels(): array
+    // Retorna array associativo para preencher selects no formulário [ 'transf_bancaria' => 'Transferência Bancária' ]
+    public static function array(): array
     {
-        return [
-            self::CreditCard->value => __('Cartão de Crédito'),
-            self::DebitCard->value => __('Cartão de Débito'),
-            self::BankSlip->value => __('Boleto Bancário'),
-            self::Pix->value => __('PIX'),
-            self::Cash->value => __('Dinheiro'),
-            self::BankCheck->value => __('Cheque'),
-            self::BankTransfer->value => __('Transferência Bancária'),
-        ];
+        $array = [];
+        foreach (self::cases() as $case) {
+            $array[$case->value] = $case->label();
+        }
+        return $array;
     }
 }

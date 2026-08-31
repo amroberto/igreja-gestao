@@ -2,13 +2,15 @@
 
 namespace App\Models;
 
+use App\Enums\DeliveryMethodEnum;
 use App\Enums\GenderEnum;
+use App\Enums\PaymentMethodEnum;
 use App\Models\Contribution;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Member extends Model
 {
@@ -16,7 +18,7 @@ class Member extends Model
     use HasFactory;
 
     use SoftDeletes;
-    
+
     protected $fillable = [
         'first_name',
         'middle_name',
@@ -58,13 +60,15 @@ class Member extends Model
         'due_day' => 'integer',
         'amount' => 'decimal:2',
         'gender' => GenderEnum::class,
+        'delivery_method' => DeliveryMethodEnum::class,
+        'payment_method' => PaymentMethodEnum::class,
     ];
 
     protected $attributes = [
         'is_active' => true,
         'is_contributor' => false,
         'delivery_method' => 'Postal Mail',
-        'payment_method' => 'Transferência Bancária',
+        'payment_method' => 'transf_bancaria',
         'due_day' => 5,
         'amount' => 0.00,
     ];
@@ -80,9 +84,9 @@ class Member extends Model
     }
 
     public function contributions()
-      {
-          return $this->hasMany(Contribution::class);
-      }
+    {
+        return $this->hasMany(Contribution::class);
+    }
 
     public function getNameAttribute()
     {
@@ -99,9 +103,8 @@ class Member extends Model
         return implode(' ', $nameParts);
     }
 
-    public function creditCards():HasMany
+    public function creditCards(): HasMany
     {
         return $this->hasMany(CreditCard::class);
     }
-    
 }
