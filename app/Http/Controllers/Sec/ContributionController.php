@@ -2,18 +2,23 @@
 
 namespace App\Http\Controllers\Sec;
 
-use App\Models\Member;
-use App\Models\Contribution;
-use Illuminate\Http\Request;
-use App\Models\ParochialUnion;
-use App\Models\FinancialEntity;
-use Barryvdh\DomPDF\Facade\Pdf;
 use App\Enums\PaymentMethodEnum;
-use NumberToWords\NumberToWords;
+use App\Http\Controllers\Controller;
+use App\Models\Community;
+use App\Models\Contribution;
+use App\Models\FinancialEntity;
+use App\Models\Member;
+use App\Models\MonthlyConfig;
+use App\Models\ParochialUnion;
+use App\Models\UserCommunity;
+use App\Services\BatchContributionService;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Auth;
+use NumberToWords\NumberToWords;
 
 class ContributionController extends Controller
 {
@@ -365,5 +370,80 @@ class ContributionController extends Controller
         ));
 
         return $pdf->download("relatorio_contribuicoes_comunidade_{$request->start_date}_a_{$request->end_date}.pdf");
+    }
+
+    public function showBatchForm()
+    {
+        $user = Auth::user();
+
+        // Busca as comunidades às quais o usuário tem acesso
+        $communities = $user->communities;
+
+        return view('sec.contributions.batch_form', compact('communities'));
+    }
+
+    /**
+     * Processa o lote e retorna o arquivo ZIP para download.
+     */
+    public function processBatchGenerate(Request $request, BatchContributionService $batchService)
+    {
+        set_time_limit(300);
+        ini_set('memory_limit', '512M');
+
+        $request->validate([
+            'month'        => 'required|integer|between:1,12',
+            'year'         => 'required|integer|min:2020|max:2099',
+            'community_id' => 'required|exists:communities,id',
+        ]);
+
+        $communityId = (int) $request->input('community_id');
+        $month       = (int) $request->input('month');
+        $year        = (int) $request->input('year');
+
+        // Monta a data no formato Y-m-01 para buscar no banco
+        $referenceDate = Carbon::createFromDate($year, $month, 1)->format('Y-m-01');
+
+        // Validação de existência da configuração para a comunidade
+        $configExists = MonthlyConfig::where('community_id', $communityId)
+            ->whereDate('reference_date', $referenceDate)
+            ->exists();
+
+        if (!$configExists) {
+            $meses = [
+                1 => 'Janeiro',
+                2 => 'Fevereiro',
+                3 => 'Março',
+                4 => 'Abril',
+                5 => 'Maio',
+                6 => 'Junho',
+                7 => 'Julho',
+                8 => 'Agosto',
+                9 => 'Setembro',
+                10 => 'Outubro',
+                11 => 'Novembro',
+                12 => 'Dezembro'
+            ];
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', "Não há configuração de cartas de contribuição cadastrada para {$meses[$month]}/{$year} nesta comunidade.");
+        }
+
+        try {
+            $zipFilePath = $batchService->processBatch($communityId, $month, $year);
+
+            return response()->download($zipFilePath)->deleteFileAfterSend(true);
+        } catch (\Throwable $e) {
+            // Registra o erro detalhado no arquivo storage/logs/laravel.log
+            Log::error("Erro na geração em lote: " . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Ocorreu um erro ao processar as contribuições: ' . $e->getMessage());
+        }
     }
 }

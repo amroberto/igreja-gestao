@@ -260,14 +260,14 @@ class MonthlyConfigController extends Controller
         $memberIdFormatted = str_pad($member->id ?? 1, 6, '0', STR_PAD_LEFT);
         $txid = "ME{$memberIdFormatted}DOC{$documentNumber}";
 
-        if ($parish->pix_static_enabled && !empty($parish->pix_key)) {
+        if ($parochialUnion->pix_static_enabled && !empty($parochialUnion->pix_key)) {
             $qrContent = PixHelper::generatePayload(
-                pixKey: $parish->pix_key,
-                receiverName: $parish->pix_receiver_name ?? $parish->name,
-                city: $parish->pix_city ?? 'SAO PAULO',
+                pixKey: $parochialUnion->pix_key,
+                receiverName: $parochialUnion->pix_receiver_name ?? $parochialUnion->name,
+                city: $parochialUnion->pix_city ?? 'SAO PAULO',
                 amount: null,
                 txid: $txid,
-                pixKeyType: $parish->pix_key_type
+                pixKeyType: $parochialUnion->pix_key_type
             );
         } else {
             $qrContent = "PREVIEW | MEMBRO: {$memberIdFormatted} | DOC: {$documentNumber}";

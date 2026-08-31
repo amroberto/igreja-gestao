@@ -21,6 +21,8 @@
         "laravel/ui": "^4.6",
         "maatwebsite/excel": "^3.1",
         "mews/purifier": "^3.4",
+        "setasign/fpdi": "^2.6",
+        "setasign/fpdi-fpdf": "^2.3",
         "yajra/laravel-datatables-oracle": "^11.1"
     },
     "require-dev": {
