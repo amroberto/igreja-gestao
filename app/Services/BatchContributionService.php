@@ -60,6 +60,7 @@ class BatchContributionService
         $generatedPdfs = [];
 
         foreach ($members as $member) {
+            // 1. Garante/Cria a contribuição do mês para O MEMBRO (independente da forma de entrega/pagamento)
             $contribution = Contribution::where('member_id', $member->id)
                 ->whereBetween('start_date', [$startDate, $endDate])
                 ->first();
@@ -82,9 +83,14 @@ class BatchContributionService
                 ]);
             }
 
-            $paymentValue = strtolower(trim((string) ($member->payment_method?->value ?? $member->payment_method)));
-            $isBankSlip = in_array($paymentValue, ['bank_slip', 'bankslip', 'boleto', 'boleto_bancario']);
+            // Normalização e verificação do Enum de Pagamento (PaymentMethodEnum::BankSlip = 'boleto_bancario')
+            $memberPaymentMethod = $member->payment_method instanceof PaymentMethodEnum
+                ? $member->payment_method->value
+                : strtolower(trim((string) ($member->payment_method ?? '')));
 
+            $isBankSlip = ($memberPaymentMethod === PaymentMethodEnum::BankSlip->value);
+
+            // 2. Se for Boleto Bancário, gera cobrança no Asaas para TODOS os membros com essa opção de pagamento
             if ($isBankSlip) {
                 if ($contribution->payment_method !== PaymentMethodEnum::BankSlip->value) {
                     $contribution->update(['payment_method' => PaymentMethodEnum::BankSlip->value]);
@@ -97,10 +103,15 @@ class BatchContributionService
                 $contribution = $contribution->fresh();
             }
 
-            $deliveryValue = strtolower(trim((string) ($member->delivery_method?->value ?? $member->delivery_method)));
-            $isPostalDelivery = in_array($deliveryValue, ['correio', 'correios', 'postal_mail', 'postal']);
+            // Normalização e verificação do Enum de Entrega (DeliveryMethodEnum::CORREIO = 'correio')
+            $memberDeliveryMethod = $member->delivery_method instanceof DeliveryMethodEnum 
+                ? $member->delivery_method->value 
+                : strtolower(trim((string) ($member->delivery_method ?? '')));
 
-            if ($isPostalDelivery || $isBankSlip) {
+            $isPostalDelivery = ($memberDeliveryMethod === DeliveryMethodEnum::CORREIO->value);
+
+            // 3. APENAS gera e inclui o PDF no arquivo ZIP se a entrega for via CORREIO
+            if ($isPostalDelivery) {
                 $pdfPath = $this->gerarPdfIndividual($contribution, $member, $monthlyConfig);
                 if ($pdfPath) {
                     $generatedPdfs[] = $pdfPath;
@@ -123,10 +134,10 @@ class BatchContributionService
                 }
 
                 $customerData = [
-                    'name'     => $member->name,
+                    'name'     => $member->name ?? trim("{$member->first_name} {$member->last_name}"),
                     'cpfCnpj'  => $cpf,
                     'email'    => $member->email ?? null,
-                    'phone'    => preg_replace('/[^0-9]/', '', $member->mobile_phone ?? $member->phone ?? ''),
+                    'phone'    => preg_replace('/[^0-9]/', '', $member->cellphone ?? $member->phone ?? ''),
                 ];
 
                 $asaasCustomer = $this->asaasCustomerService->createCustomer($customerData);
@@ -149,7 +160,7 @@ class BatchContributionService
             $paymentData = [
                 'customer'    => $member->member_asaas_id,
                 'value'       => $valor,
-                'description' => "Contribuição mensal - " . $member->name,
+                'description' => "Contribuição mensal - " . ($member->name ?? trim("{$member->first_name} {$member->last_name}")),
                 'billingType' => 'BOLETO',
             ];
 
