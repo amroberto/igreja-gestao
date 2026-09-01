@@ -221,12 +221,12 @@ class BatchContributionService
             }, $observationsHtml);
         }
 
-        // Formatação dos Identificadores (Exemplo: cod000025doc000353)
+        // Formatação dos Identificadores
         $documentNumber = str_pad($contribution->id, 6, '0', STR_PAD_LEFT);
         $memberIdFormatted = str_pad($member->id, 6, '0', STR_PAD_LEFT);
         $txid = "ME{$memberIdFormatted}DOC{$documentNumber}";
 
-        // --- GERAÇÃO DO PIX ESTÁTICO DA UNIÃO PAROQUIAL ---
+        // GERAÇÃO DO PIX ESTÁTICO DA UNIÃO PAROQUIAL
         if ($parochialUnion && !empty($parochialUnion->pix_key)) {
             $qrContent = PixHelper::generatePayload(
                 pixKey: $parochialUnion->pix_key,
@@ -240,7 +240,6 @@ class BatchContributionService
             $qrContent = "MEMBRO:{$memberIdFormatted}|DOC:{$documentNumber}";
         }
 
-        // QR Code instanciado diretamente no construtor da biblioteca
         $qrCode = new QrCode(
             data: $qrContent,
             encoding: new Encoding('UTF-8'),
@@ -271,9 +270,8 @@ class BatchContributionService
         unset($cartaPdf);
         gc_collect_cycles();
 
-        $nomeLimpo = preg_replace('/[^A-Za-z0-9_\-]/', '_', $member->name);
-        $nomeArquivoFinal = "contribuicao_{$member->id}_{$nomeLimpo}.pdf";
-        $caminhoFinalAbsoluto = "{$tempDir}/{$nomeArquivoFinal}";
+        $nomeMembro = $member->name ?? trim("{$member->first_name} {$member->last_name}");
+        $nomeLimpo = preg_replace('/[^A-Za-z0-9_\-]/', '_', $nomeMembro);
 
         // --- MESCLAGEM DA PÁGINA 1 (CARTA) COM A PÁGINA 2 (BOLETO) ---
         if (!empty($contribution->asaas_boleto_url)) {
@@ -287,6 +285,10 @@ class BatchContributionService
 
                 if ($response->successful() && str_starts_with($response->body(), '%PDF')) {
                     file_put_contents($tempBoletoPath, $response->body());
+
+                    // Prefixo BOLETO_ para arquivos compostos (2 páginas)
+                    $nomeArquivoFinal = "BOLETO_{$member->id}_{$nomeLimpo}.pdf";
+                    $caminhoFinalAbsoluto = "{$tempDir}/{$nomeArquivoFinal}";
 
                     $mergedSuccess = $this->mesclarPdfsComFallback($tempCartaPath, $tempBoletoPath, $caminhoFinalAbsoluto);
 
@@ -305,7 +307,10 @@ class BatchContributionService
             }
         }
 
-        // Fallback: Salva a Carta Informativa como página única caso não haja boleto
+        // Prefixo RECIBO_ para arquivos simples de página única
+        $nomeArquivoFinal = "RECIBO_{$member->id}_{$nomeLimpo}.pdf";
+        $caminhoFinalAbsoluto = "{$tempDir}/{$nomeArquivoFinal}";
+
         rename($tempCartaPath, $caminhoFinalAbsoluto);
         return $caminhoFinalAbsoluto;
     }

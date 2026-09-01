@@ -24,7 +24,7 @@ enum DeliveryMethodEnum: string
             self::EMAIL => 'E-mail',
             self::SMS => 'SMS',
             self::WHATSAPP => 'WhatsApp',
-            self::CORREIO => 'Correio / Postal',
+            self::CORREIO => 'Correio',
             self::ONLINE => 'On-line',
         };
     }

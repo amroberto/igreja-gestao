@@ -2,21 +2,12 @@
 
 namespace App\Http\Controllers\Sec;
 
-use App\Models\User;
 
 use App\Models\Member;
 use Barryvdh\DomPDF\PDF;
-use App\Enums\GenderEnum;
-use App\Models\Community;
-use App\Enums\UserTypeEnum;
-use App\Models\Contribution;
 use Illuminate\Http\Request;
 use App\Models\ParochialUnion;
 use App\Services\Asaas\AsaasCustomerService;
-use App\Enums\MaritalStatusEnum;
-use App\Enums\PaymentMethodEnum;
-use App\Enums\DeliveryMethodEnum;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -65,9 +56,6 @@ class MemberController extends Controller
         return $data;
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request, AsaasCustomerService $asaas)
     {
         $data = $this->removeMasks($request->all());
