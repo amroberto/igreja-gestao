@@ -27,6 +27,48 @@ class AsaasPaymentService
         }
     }
 
+    /**
+     * Atualiza uma cobrança existente no Asaas (POST /v3/payments/{id}).
+     */
+    public function updateCharge(string $paymentId, array $paymentData): array
+    {
+        try {
+            Log::info('Enviando requisição para atualizar cobrança no Asaas', [
+                'payment_id' => $paymentId,
+                'payload' => $paymentData,
+            ]);
+
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'Accept'       => 'application/json',
+                'access_token' => $this->apiKey,
+            ])->post("{$this->baseUrl}/payments/{$paymentId}", $paymentData);
+
+            if ($response->failed()) {
+                $errorBody = $response->json();
+                $errorMessage = $errorBody['errors'][0]['description'] ?? 'Erro desconhecido ao atualizar cobrança no Asaas.';
+                throw new \Exception("Erro na API do Asaas: {$errorMessage}");
+            }
+
+            $data = $response->json();
+
+            // Se for/virou cobrança PIX, busca o QR Code e Payload atualizados na API
+            if (($paymentData['billingType'] ?? '') === 'PIX' || ($data['billingType'] ?? '') === 'PIX') {
+                $pixData = $this->getPixQrCode($paymentId);
+                $data['pixQrCode']   = $pixData['encodedImage'] ?? $pixData['pixQrCode'] ?? null;
+                $data['encodedValue'] = $pixData['payload'] ?? $pixData['encodedValue'] ?? null;
+            }
+
+            return $data;
+        } catch (\Exception $e) {
+            Log::error('Exceção em updateCharge', [
+                'payment_id' => $paymentId,
+                'error'      => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
     public function createBoletoCharge($member, $paymentData, $dueDate)
     {
         try {
@@ -164,7 +206,6 @@ class AsaasPaymentService
                     'response' => $pixResponse->body(),
                     'member_id' => $member->id,
                 ]);
-                // Continuar com pixQrCode e encodedValue como null para não interromper o fluxo
                 $data['pixQrCode'] = null;
                 $data['encodedValue'] = null;
             }
@@ -300,6 +341,37 @@ class AsaasPaymentService
                 'trace' => $e->getTraceAsString(),
             ]);
             throw $e;
+        }
+    }
+
+    /**
+     * Busca as informações do QR Code e Copia e Cola Pix na API do Asaas.
+     */
+    public function getPixQrCode(string $paymentId): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'Accept'       => 'application/json',
+                'access_token' => $this->apiKey,
+            ])->get("{$this->baseUrl}/payments/{$paymentId}/pixQrCode");
+
+            if ($response->failed()) {
+                Log::error('Falha ao buscar QR Code Pix no Asaas', [
+                    'payment_id' => $paymentId,
+                    'status'     => $response->status(),
+                    'body'       => $response->body(),
+                ]);
+                return [];
+            }
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error('Exceção em getPixQrCode', [
+                'payment_id' => $paymentId,
+                'error'      => $e->getMessage(),
+            ]);
+            return [];
         }
     }
 

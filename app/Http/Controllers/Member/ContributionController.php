@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Auth;
 use App\Services\Asaas\AsaasPaymentService;
 use App\Services\Asaas\AsaasCustomerService;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 class ContributionController extends Controller
 {
@@ -63,7 +65,6 @@ class ContributionController extends Controller
     public function store(Request $request)
     {
         try {
-            // Validação dos dados
             $validated = $request->validate([
                 'member_id' => 'required|exists:members,id',
                 'community_id' => 'required|exists:communities,id',
@@ -90,21 +91,19 @@ class ContributionController extends Controller
 
             $member = Member::findOrFail($validated['member_id']);
 
-            // Verificar se member_asaas_id existe
             if (!$member->member_asaas_id) {
                 throw new \Exception('ID do cliente Asaas não encontrado para o membro.');
             }
 
-            // Criar cobrança no Asaas
             $paymentData = [
                 'customer' => $member->member_asaas_id,
                 'value' => (float) $validated['amount'],
                 'description' => $validated['description'] ?? 'Contribuição de ' . $member->name,
             ];
-            // vencimento em 3 dias úteis
+
+            // Vencimento padrão para 3 dias
             $dueDate = now()->addDays(3)->format('Y-m-d');
 
-            // Selecionar método de pagamento
             $asaasResponse = null;
             if ($validated['payment_method'] === 'boleto_bancario') {
                 $paymentData['billingType'] = 'BOLETO';
@@ -112,12 +111,7 @@ class ContributionController extends Controller
             } elseif ($validated['payment_method'] === 'pix') {
                 $paymentData['billingType'] = 'PIX';
                 $asaasResponse = $this->asaasPaymentService->createPixCharge($member, $paymentData, $dueDate);
-                // Log detalhado da resposta bruta
-                Log::debug('Resposta completa do Asaas para cobrança PIX', [
-                    'asaas_response' => $asaasResponse,
-                    'pixQrCode' => $asaasResponse['pixQrCode'] ?? $asaasResponse['qrCode'] ?? $asaasResponse['pix']['qrCode'] ?? 'N/A',
-                    'encodedValue' => $asaasResponse['encodedValue'] ?? $asaasResponse['payload'] ?? $asaasResponse['pix']['payload'] ?? 'N/A',
-                ]);
+                Log::debug('Resposta do Asaas para cobrança PIX', ['asaas_response' => $asaasResponse]);
             } elseif ($validated['payment_method'] === 'creditcard') {
                 $paymentData['billingType'] = 'CREDIT_CARD';
                 $creditCardData = [
@@ -133,7 +127,6 @@ class ContributionController extends Controller
                 throw new \Exception('Método de pagamento inválido: ' . $validated['payment_method']);
             }
 
-            // Mapear payment_method para o valor do enum
             $paymentMethod = match ($validated['payment_method']) {
                 'boleto_bancario' => PaymentMethodEnum::BankSlip->value,
                 'pix' => PaymentMethodEnum::Pix->value,
@@ -141,16 +134,6 @@ class ContributionController extends Controller
                 default => throw new \Exception('Método de pagamento inválido: ' . $validated['payment_method']),
             };
 
-            // Log dos dados antes de salvar no banco
-            Log::debug('Preparando para salvar contribuição no banco', [
-                'member_id' => $member->id,
-                'asaas_response' => $asaasResponse,
-                'payment_method' => $paymentMethod,
-                'asaas_pix_qr_code' => $asaasResponse['pixQrCode'] ?? $asaasResponse['qrCode'] ?? $asaasResponse['pix']['qrCode'] ?? null,
-                'asaas_pix_payload' => $asaasResponse['encodedValue'] ?? $asaasResponse['payload'] ?? $asaasResponse['pix']['payload'] ?? null,
-            ]);
-
-            // Salvar no banco
             DB::beginTransaction();
             $payment = Contribution::create([
                 'contribution_date' => $validated['contribution_date'],
@@ -173,15 +156,6 @@ class ContributionController extends Controller
             ]);
             DB::commit();
 
-            Log::info('Contribuição criada com sucesso', [
-                'contribution_id' => $payment->id,
-                'asaas_payment_id' => $asaasResponse['id'] ?? 'N/A',
-                'member_id' => $member->id,
-                'bankSlipUrl' => $asaasResponse['bankSlipUrl'] ?? 'N/A',
-                'pixQrCode' => $asaasResponse['pixQrCode'] ?? $asaasResponse['qrCode'] ?? $asaasResponse['pix']['qrCode'] ?? 'N/A',
-                'pixPayload' => $asaasResponse['encodedValue'] ?? $asaasResponse['payload'] ?? $asaasResponse['pix']['payload'] ?? 'N/A',
-            ]);
-
             return response()->json([
                 'success' => true,
                 'message' => 'Contribuição criada com sucesso',
@@ -190,10 +164,6 @@ class ContributionController extends Controller
                 'pixPayload' => $asaasResponse['encodedValue'] ?? $asaasResponse['payload'] ?? $asaasResponse['pix']['payload'] ?? null,
             ], 201);
         } catch (ValidationException $e) {
-            Log::error('Erro de validação ao criar contribuição', [
-                'errors' => $e->errors(),
-                'validated' => $request->all(),
-            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Erro de validação',
@@ -201,12 +171,7 @@ class ContributionController extends Controller
             ], 422);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Erro ao criar contribuição', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'validated' => $request->all(),
-                'asaas_response' => isset($asaasResponse) ? $asaasResponse : 'N/A',
-            ]);
+            Log::error('Erro ao criar contribuição: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Erro ao criar contribuição: ' . $e->getMessage(),
@@ -214,16 +179,200 @@ class ContributionController extends Controller
         }
     }
 
+    public function edit(Contribution $contribution)
+    {
+        $member = Auth::user()->member;
+
+        if (!$member || $contribution->member_id !== $member->id) {
+            return redirect()->route('member.contributions.index')->with('error', 'Ação não autorizada.');
+        }
+
+        if ($contribution->is_paid || in_array($contribution->status?->value ?? $contribution->status, ['confirmed', 'paid'])) {
+            return redirect()->route('member.contributions.index')->with('error', 'Contribuições pagas não podem ser editadas.');
+        }
+
+        $communities = Community::where('id', '!=', 1)->get();
+
+        return view('member.contributions.edit', compact('contribution', 'member', 'communities'));
+    }
+
+    /**
+     * Ponto de entrada padrão para o recurso de atualização do REST
+     */
+    public function update(Request $request, Contribution $contribution)
+    {
+        return $this->updateDueDate($request, $contribution);
+    }
+
+    /**
+     * Permite alterar termos de contribuição e reflete as alterações no Asaas
+     */
+    public function updateDueDate(Request $request, Contribution $contribution)
+    {
+        $member = Auth::user()->member;
+        if (!$member || $contribution->member_id !== $member->id) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Ação não autorizada.'], 403);
+            }
+            return redirect()->back()->with('error', 'Ação não autorizada.');
+        }
+
+        if ($contribution->is_paid || in_array($contribution->status?->value ?? $contribution->status, ['confirmed', 'paid'])) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Contribuições já pagas não podem ser alteradas.'], 422);
+            }
+            return redirect()->back()->with('error', 'Contribuições já pagas não podem ser alteradas.');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'community_id'   => 'required|exists:communities,id',
+            'due_date'       => 'required|date|after_or_equal:today',
+            'amount'         => 'required|numeric|min:0.01',
+            'payment_method' => 'required|in:boleto_bancario,pix',
+            'type'           => 'nullable|string',
+            'start_date'     => 'nullable|date',
+            'end_date'       => 'nullable|date|after_or_equal:start_date',
+            'description'    => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erro nos dados preenchidos no formulário.',
+                    'errors'  => $validator->errors()
+                ], 422);
+            }
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        try {
+            $newDueDate   = Carbon::parse($request->due_date);
+            $newAmount    = (float) $request->amount;
+            $type         = $request->input('type', $contribution->type ?? 'mensal');
+            $startDate    = $request->input('start_date', $contribution->start_date);
+            $endDate      = $type === 'periodo' ? $request->input('end_date') : null;
+
+            $paymentMethod = match ($request->payment_method) {
+                'boleto_bancario' => PaymentMethodEnum::BankSlip->value,
+                'pix'             => PaymentMethodEnum::Pix->value,
+                default           => PaymentMethodEnum::BankSlip->value,
+            };
+
+            // Se existir cobrança ativa no Asaas, envia atualização
+            if (!empty($contribution->asaas_payment_id)) {
+                $paymentData = [
+                    'value'       => $newAmount,
+                    'dueDate'     => $newDueDate->format('Y-m-d'),
+                    'description' => $request->input('description', $contribution->description),
+                    'billingType' => $request->payment_method === 'pix' ? 'PIX' : 'BOLETO',
+                ];
+
+                $asaasResponse = $this->asaasPaymentService->updateCharge($contribution->asaas_payment_id, $paymentData);
+
+                if (!empty($asaasResponse['id'])) {
+                    $contribution->asaas_boleto_url  = $asaasResponse['bankSlipUrl'] ?? $contribution->asaas_boleto_url;
+                    $contribution->asaas_pix_qr_code = $asaasResponse['pixQrCode'] ?? $asaasResponse['qrCode'] ?? $contribution->asaas_pix_qr_code;
+                    $contribution->asaas_pix_payload = $asaasResponse['encodedValue'] ?? $asaasResponse['payload'] ?? $contribution->asaas_pix_payload;
+                }
+            }
+
+            // Atualiza registros locais
+            $contribution->community_id      = $request->community_id;
+            $contribution->contribution_date = $newDueDate;
+            $contribution->amount            = $newAmount;
+            $contribution->payment_method    = $paymentMethod;
+
+            if (\Illuminate\Support\Facades\Schema::hasColumn('contributions', 'due_date')) {
+                $contribution->due_date = $newDueDate;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('contributions', 'type')) {
+                $contribution->type = $type;
+            }
+            if ($startDate && \Illuminate\Support\Facades\Schema::hasColumn('contributions', 'start_date')) {
+                $contribution->start_date = $startDate;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('contributions', 'end_date')) {
+                $contribution->end_date = $endDate;
+            }
+            if ($request->has('description') && \Illuminate\Support\Facades\Schema::hasColumn('contributions', 'description')) {
+                $contribution->description = $request->description;
+            }
+
+            $contribution->save();
+
+            // Retorno para AJAX
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success'     => true,
+                    'message'     => 'Contribuição atualizada e reemitida com sucesso!',
+                    'bankSlipUrl' => $contribution->asaas_boleto_url,
+                    'pixQrCode'   => $contribution->asaas_pix_qr_code,
+                    'pixPayload'  => $contribution->asaas_pix_payload,
+                    'redirect'    => route('member.contributions.index'),
+                ], 200);
+            }
+
+            return redirect()->route('member.contributions.index')->with('success', 'Contribuição atualizada com sucesso!');
+        } catch (\Exception $e) {
+            Log::error('Erro ao atualizar contribuição: ' . $e->getMessage());
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erro ao atualizar cobrança: ' . $e->getMessage(),
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', 'Erro ao atualizar contribuição: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Exibe a view com o QR Code do Pix (pix_qrcode.blade.php)
+     */
     public function showPix(Contribution $contribution)
     {
-        // Garante que o usuário só veja o PIX da própria contribuição
-        if ($contribution->user_id !== auth()->id()) {
+        $member = Auth::user()->member;
+        if (!$member || $contribution->member_id !== $member->id) {
             abort(403);
         }
 
-        $pixCode = $contribution->asaas_pix_qr_code;
-        $pixPayload = $contribution->asaas_pix_payload;
+        $pixCode = $contribution->asaas_pix_payload ?? $contribution->asaas_pix_qr_code;
 
-        return view('member.contributions.pix', compact('contribution', 'pixCode', 'pixPayload'));
+        // Se o Pix estiver vazio no banco, busca direto no Asaas via API e salva
+        if (empty($pixCode) && !empty($contribution->asaas_payment_id)) {
+            try {
+                $pixData = $this->asaasPaymentService->getPixQrCode($contribution->asaas_payment_id);
+                if (!empty($pixData['payload']) || !empty($pixData['encodedImage'])) {
+                    $pixCode = $pixData['payload'] ?? $pixData['encodedImage'];
+
+                    $contribution->asaas_pix_qr_code = $pixData['encodedImage'] ?? $contribution->asaas_pix_qr_code;
+                    $contribution->asaas_pix_payload = $pixData['payload'] ?? $contribution->asaas_pix_payload;
+                    $contribution->save();
+                }
+            } catch (\Exception $e) {
+                Log::error('Erro ao buscar QR Code Pix na view showPix: ' . $e->getMessage());
+            }
+        }
+
+        return view('member.contributions.pix_qrcode', compact('contribution', 'pixCode'));
+    }
+
+    /**
+     * Redireciona diretamente para a URL do PDF do Boleto no Asaas
+     */
+    public function showBoleto(Contribution $contribution)
+    {
+        $member = Auth::user()->member;
+        if (!$member || $contribution->member_id !== $member->id) {
+            abort(403);
+        }
+
+        if (empty($contribution->asaas_boleto_url)) {
+            return redirect()->route('member.contributions.index')->with('error', 'URL do boleto não encontrada.');
+        }
+
+        return redirect()->away($contribution->asaas_boleto_url);
     }
 }
