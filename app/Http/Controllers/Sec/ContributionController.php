@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Sec;
 
 use App\Enums\PaymentMethodEnum;
+use App\Enums\StatusPaymentEnum;
 use App\Http\Controllers\Controller;
 use App\Models\Community;
 use App\Models\Contribution;
@@ -10,7 +11,6 @@ use App\Models\FinancialEntity;
 use App\Models\Member;
 use App\Models\MonthlyConfig;
 use App\Models\ParochialUnion;
-use Illuminate\Validation\Rules\Enum;
 use App\Models\UserCommunity;
 use App\Services\BatchContributionService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rules\Enum;
 use NumberToWords\NumberToWords;
 
 class ContributionController extends Controller
@@ -132,6 +133,100 @@ class ContributionController extends Controller
                 ->withErrors(['error' => 'Erro ao registrar contribuições.'])
                 ->withInput();
         }
+    }
+
+    /**
+     * Busca uma contribuição pendente pelo ID/Código do Documento para a tela de Baixa Rápida.
+     */
+    public function findPendingDocument($id)
+    {
+        $communityId = Auth::user()->community_id;
+
+        // Converte de "000353" ou "ME000010DOC000353" para ID numérico limpo se necessário
+        $cleanId = (int) preg_replace('/\D/', '', $id);
+
+        $contribution = Contribution::with('member')
+            ->where('id', $cleanId)
+            ->where('community_id', $communityId)
+            ->first();
+
+        if (!$contribution) {
+            return response()->json(['message' => 'Documento de contribuição não encontrado.'], 404);
+        }
+
+        if ($contribution->is_paid) {
+            return response()->json([
+                'message' => 'Esta contribuição já consta como PAGA em ' . ($contribution->paid_at ? $contribution->paid_at->format('d/m/Y') : 'data anterior') . '.'
+            ], 422);
+        }
+
+        return response()->json([
+            'id'                  => $contribution->id,
+            'member_id'           => $contribution->member_id,
+            'member_name'         => $contribution->member?->name ?? trim(($contribution->member?->first_name ?? '') . ' ' . ($contribution->member?->last_name ?? '')),
+            'amount'              => $contribution->amount,
+            'contribution_date'   => $contribution->contribution_date ? $contribution->contribution_date->format('Y-m-d') : null,
+            'type'                => $contribution->type ?? 'mensal',
+            'start_date'          => $contribution->start_date ? $contribution->start_date->format('Y-m') : null,
+            'end_date'            => $contribution->end_date ? $contribution->end_date->format('Y-m') : null,
+            'payment_method'      => $contribution->payment_method?->value ?? $contribution->payment_method,
+        ]);
+    }
+
+    /**
+     * Processa a baixa em lote/múltipla das contribuições pré-existentes.
+     */
+    public function processBatchPayoff(Request $request)
+    {
+        $communityId = Auth::user()->community_id;
+
+        $request->validate([
+            'payoffs'                  => 'required|array|min:1',
+            'payoffs.*.contribution_id' => 'required|exists:contributions,id',
+            'payoffs.*.paid_at'        => 'required|date',
+            'payoffs.*.payment_method' => ['required', new \Illuminate\Validation\Rules\Enum(PaymentMethodEnum::class)],
+            'payoffs.*.amount'         => 'required|numeric|min:0.01', // <--- Validação de valor ajustada
+            'payoffs.*.type'           => 'required|in:mensal,periodo',
+            'payoffs.*.end_date'       => 'nullable|date|after_or_equal:payoffs.*.start_date',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            foreach ($request->input('payoffs') as $entry) {
+                $contribution = Contribution::where('id', $entry['contribution_id'])
+                    ->where('community_id', $communityId)
+                    ->firstOrFail();
+
+                $contribution->update([
+                    'is_paid'        => true,
+                    'paid_at'        => $entry['paid_at'],
+                    'amount'         => $entry['amount'], // <--- Atualiza com o valor final pago pelo membro
+                    'payment_method' => $entry['payment_method'],
+                    'type'           => $entry['type'],
+                    'end_date'       => $entry['type'] === 'periodo' ? ($entry['end_date'] ?? null) : null,
+                    'status'         => \App\Enums\StatusPaymentEnum::Confirmed->value,
+                ]);
+            }
+
+            DB::commit();
+
+            return redirect()
+                ->route('sec.contributions.index')
+                ->with('success', 'Baixa(s) de contribuição efetuada(s) com sucesso!');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Erro ao dar baixa em contribuição: ' . $e->getMessage());
+
+            return redirect()->back()
+                ->withErrors(['error' => 'Erro ao processar baixa(s): ' . $e->getMessage()])
+                ->withInput();
+        }
+    }
+
+    public function showPayoffForm()
+    {
+        return view('sec.contributions.payoff');
     }
 
     public function generateReceipt($id)

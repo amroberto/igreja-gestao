@@ -16,6 +16,16 @@ Route::middleware(['auth', 'verified', 'access-sec-panel'])->prefix('sec')->grou
     Route::get('/members/{member}/pdf', [MemberController::class, 'pdf'])->name('sec.members.pdf');
     Route::get('/members/data', [MemberController::class, 'data'])->name('sec.members.data');
     
+    // Rotas de Baixa de Contribuições (DEVEM vir antes do resource)
+    Route::prefix('contributions')->name('sec.contributions.')->group(function () {
+        // Tela e processamento da Baixa por Documento
+        Route::get('/payoff', [ContributionController::class, 'showPayoffForm'])->name('payoff.form');
+        Route::post('/payoff', [ContributionController::class, 'processBatchPayoff'])->name('payoff.store');
+        
+        // API de busca rápida por documento
+        Route::get('/find-pending-doc/{id}', [ContributionController::class, 'findPendingDocument'])->name('find-pending-doc');
+    });
+
     // Rotas de Contribuição (Geração em Lote) - DEVEM vir antes do resource
     Route::get('/contributions/batch-generate', [ContributionController::class, 'showBatchForm'])->name('sec.contributions.batch-form');
     Route::post('/contributions/batch-generate', [ContributionController::class, 'processBatchGenerate'])->name('sec.contributions.batch-process');
