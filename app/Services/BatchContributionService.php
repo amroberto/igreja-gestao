@@ -8,6 +8,7 @@ use App\Models\ParochialUnion;
 use App\Models\MonthlyConfig;
 use App\Enums\PaymentMethodEnum;
 use App\Enums\DeliveryMethodEnum;
+use App\Enums\StatusPaymentEnum;
 use App\Helpers\PixHelper;
 use App\Services\Asaas\AsaasPaymentService;
 use App\Services\Asaas\AsaasCustomerService;
@@ -52,6 +53,7 @@ class BatchContributionService
             ->with('community.parish')
             ->first();
 
+        // 1. Busca TODOS os membros ativos e contribuintes da comunidade
         $members = Member::where('community_id', $communityId)
             ->where('is_active', true)
             ->where('is_contributor', true)
@@ -60,7 +62,7 @@ class BatchContributionService
         $generatedPdfs = [];
 
         foreach ($members as $member) {
-            // 1. Garante/Cria a contribuição do mês para O MEMBRO (independente da forma de entrega/pagamento)
+            // Garante/Cria a contribuição do mês para O MEMBRO (para qualquer método de entrega/pagamento)
             $contribution = Contribution::where('member_id', $member->id)
                 ->whereBetween('start_date', [$startDate, $endDate])
                 ->first();
@@ -83,14 +85,14 @@ class BatchContributionService
                 ]);
             }
 
-            // Normalização e verificação do Enum de Pagamento (PaymentMethodEnum::BankSlip = 'boleto_bancario')
+            // Normalização do Método de Pagamento
             $memberPaymentMethod = $member->payment_method instanceof PaymentMethodEnum
                 ? $member->payment_method->value
                 : strtolower(trim((string) ($member->payment_method ?? '')));
 
             $isBankSlip = ($memberPaymentMethod === PaymentMethodEnum::BankSlip->value);
 
-            // 2. Se for Boleto Bancário, gera cobrança no Asaas para TODOS os membros com essa opção de pagamento
+            // 2. Se for Boleto Bancário, gera cobrança no Asaas para TODOS os membros com essa opção
             if ($isBankSlip) {
                 if ($contribution->payment_method !== PaymentMethodEnum::BankSlip->value) {
                     $contribution->update(['payment_method' => PaymentMethodEnum::BankSlip->value]);
@@ -103,16 +105,17 @@ class BatchContributionService
                 $contribution = $contribution->fresh();
             }
 
-            // Normalização e verificação do Enum de Entrega (DeliveryMethodEnum::CORREIO = 'correio')
+            // Normalização do Método de Entrega
             $memberDeliveryMethod = $member->delivery_method instanceof DeliveryMethodEnum 
                 ? $member->delivery_method->value 
                 : strtolower(trim((string) ($member->delivery_method ?? '')));
 
             $isPostalDelivery = ($memberDeliveryMethod === DeliveryMethodEnum::CORREIO->value);
 
-            // 3. APENAS gera e inclui o PDF no arquivo ZIP se a entrega for via CORREIO
+            // 3. APENAS inclui no ZIP se a entrega for via CORREIO
             if ($isPostalDelivery) {
-                $pdfPath = $this->gerarPdfIndividual($contribution, $member, $monthlyConfig);
+                // Passamos a informação se deve ou não anexar a folha do boleto
+                $pdfPath = $this->gerarPdfIndividual($contribution, $member, $monthlyConfig, $isBankSlip);
                 if ($pdfPath) {
                     $generatedPdfs[] = $pdfPath;
                 }
@@ -194,12 +197,11 @@ class BatchContributionService
         }
     }
 
-    private function gerarPdfIndividual(Contribution $contribution, Member $member, ?MonthlyConfig $monthlyConfig): ?string
+    private function gerarPdfIndividual(Contribution $contribution, Member $member, ?MonthlyConfig $monthlyConfig, bool $isBankSlip = false): ?string
     {
         $tempDir = storage_path('app/temp');
         File::ensureDirectoryExists($tempDir);
 
-        // 1. Busca União Paroquial (Titular do Pix Estático)
         $parochialUnion = ParochialUnion::first();
         $parish = $monthlyConfig?->community?->parish ?? $member->community?->parish;
         $config = $monthlyConfig;
@@ -232,12 +234,10 @@ class BatchContributionService
             }, $observationsHtml);
         }
 
-        // Formatação dos Identificadores
         $documentNumber = str_pad($contribution->id, 6, '0', STR_PAD_LEFT);
         $memberIdFormatted = str_pad($member->id, 6, '0', STR_PAD_LEFT);
         $txid = "ME{$memberIdFormatted}DOC{$documentNumber}";
 
-        // GERAÇÃO DO PIX ESTÁTICO DA UNIÃO PAROQUIAL
         if ($parochialUnion && !empty($parochialUnion->pix_key)) {
             $qrContent = PixHelper::generatePayload(
                 pixKey: $parochialUnion->pix_key,
@@ -262,7 +262,7 @@ class BatchContributionService
         $writer = new PngWriter();
         $qrCodeBase64 = $writer->write($qrCode)->getDataUri();
 
-        // Renderização da Carta Informativa (PDF)
+        // Renderização da Carta Informativa / Recibo (Página 1)
         $cartaPdf = Pdf::loadView('sec.monthly-configs.pdf', compact(
             'config',
             'parochialUnion',
@@ -284,9 +284,17 @@ class BatchContributionService
         $nomeMembro = $member->name ?? trim("{$member->first_name} {$member->last_name}");
         $nomeLimpo = preg_replace('/[^A-Za-z0-9_\-]/', '_', $nomeMembro);
 
-        // --- MESCLAGEM DA PÁGINA 1 (CARTA) COM A PÁGINA 2 (BOLETO) ---
-        if (!empty($contribution->asaas_boleto_url)) {
-            Log::info("[TENTANDO MESCLAR] Baixando boleto da URL: {$contribution->asaas_boleto_url}");
+        // Checa se o boleto está PAGO
+        $contributionStatus = $contribution->status instanceof StatusPaymentEnum
+            ? $contribution->status->value
+            : (string) ($contribution->status ?? '');
+
+        $isPaid = (bool) $contribution->is_paid 
+            || in_array(strtolower(trim($contributionStatus)), ['paid', 'confirmed', 'pago', 'confirmado']);
+
+        // --- MESCLAGEM COM PÁGINA 2 (BOLETO) SOMENTE SE FOR BOLETO E NÃO ESTIVER PAGO ---
+        if ($isBankSlip && !$isPaid && !empty($contribution->asaas_boleto_url)) {
+            Log::info("[TENTANDO MESCLAR] Baixando boleto pendente da URL: {$contribution->asaas_boleto_url}");
             $tempBoletoPath = "{$tempDir}/boleto_{$contribution->id}.pdf";
 
             try {
@@ -297,7 +305,6 @@ class BatchContributionService
                 if ($response->successful() && str_starts_with($response->body(), '%PDF')) {
                     file_put_contents($tempBoletoPath, $response->body());
 
-                    // Prefixo BOLETO_ para arquivos compostos (2 páginas)
                     $nomeArquivoFinal = "BOLETO_{$member->id}_{$nomeLimpo}.pdf";
                     $caminhoFinalAbsoluto = "{$tempDir}/{$nomeArquivoFinal}";
 
@@ -307,7 +314,7 @@ class BatchContributionService
                     @unlink($tempBoletoPath);
 
                     if ($mergedSuccess) {
-                        Log::info("[SUCESSO] PDF mesclado (Carta + Boleto) para Contribuição ID {$contribution->id}");
+                        Log::info("[SUCESSO] PDF mesclado (Carta + Boleto Pendente) para Contribuição ID {$contribution->id}");
                         return $caminhoFinalAbsoluto;
                     }
                 } else {
@@ -318,7 +325,7 @@ class BatchContributionService
             }
         }
 
-        // Prefixo RECIBO_ para arquivos simples de página única
+        // Se o boleto já está PAGO ou é outro método de pagamento: gera apenas o PDF de 1 página (Carta/Recibo)
         $nomeArquivoFinal = "RECIBO_{$member->id}_{$nomeLimpo}.pdf";
         $caminhoFinalAbsoluto = "{$tempDir}/{$nomeArquivoFinal}";
 
@@ -328,7 +335,6 @@ class BatchContributionService
 
     private function mesclarPdfsComFallback(string $cartaPath, string $boletoPath, string $outputPath): bool
     {
-        // 1. Tenta via pdfunite (Pacote nativo do Linux)
         exec("which pdfunite", $pdfUniteCheck);
         if (!empty($pdfUniteCheck[0])) {
             $cmd = sprintf("pdfunite %s %s %s", escapeshellarg($cartaPath), escapeshellarg($boletoPath), escapeshellarg($outputPath));
@@ -338,7 +344,6 @@ class BatchContributionService
             }
         }
 
-        // 2. Tenta via pdftk (Pacote nativo do Linux)
         exec("which pdftk", $pdfTkCheck);
         if (!empty($pdfTkCheck[0])) {
             $cmd = sprintf("pdftk %s %s cat output %s", escapeshellarg($cartaPath), escapeshellarg($boletoPath), escapeshellarg($outputPath));
@@ -348,7 +353,6 @@ class BatchContributionService
             }
         }
 
-        // 3. Tenta via classe FPDI caso esteja disponível no PHP
         if (class_exists('Setasign\Fpdi\Fpdi') || class_exists('Setasign\Fpdi\Fpdf\Fpdi')) {
             try {
                 $fpdiClass = class_exists('Setasign\Fpdi\Fpdf\Fpdi') ? 'Setasign\Fpdi\Fpdf\Fpdi' : 'Setasign\Fpdi\Fpdi';

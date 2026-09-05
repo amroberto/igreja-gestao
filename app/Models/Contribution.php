@@ -26,6 +26,8 @@ class Contribution extends Model
         'description',
         'payment_method',
         'status',
+        'is_paid',
+        'paid_at',
         'asaas_payment_id',
         'asaas_boleto_url',
         'asaas_pix_qr_code',
@@ -37,6 +39,9 @@ class Contribution extends Model
         'contribution_date' => 'date',
         'start_date' => 'date',
         'end_date' => 'date',
+        'paid_at' => 'date',
+        'is_paid' => 'boolean',
+        'amount' => 'decimal:2',
         'payment_method' => PaymentMethodEnum::class,
         'status' => StatusPaymentEnum::class,
     ];

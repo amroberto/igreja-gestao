@@ -28,9 +28,9 @@
                 </div>
             </div>
 
-            {{-- Data do Lançamento --}}
+            {{-- Data do Lançamento / Pagamento --}}
             <div class="col-md-2 form-group">
-                <label for="contribution_date_{{ $index }}">Data Lançamento <span class="text-danger">*</span></label>
+                <label for="contribution_date_{{ $index }}">Data Lançamento/Pgto <span class="text-danger">*</span></label>
                 <div class="input-group">
                     <div class="input-group-prepend">
                         <span class="input-group-text"><i class="fas fa-calendar-day"></i></span>
@@ -75,7 +75,7 @@
             </div>
         </div>
 
-        {{-- Segunda Linha: Campos condicionais --}}
+        {{-- Segunda Linha: Campos adicionais --}}
         <div class="row align-items-end conditional-fields">
             {{-- Mês Inicial --}}
             <div class="col-md-3 form-group start-date-group">

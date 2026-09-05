@@ -10,6 +10,7 @@ use App\Models\FinancialEntity;
 use App\Models\Member;
 use App\Models\MonthlyConfig;
 use App\Models\ParochialUnion;
+use Illuminate\Validation\Rules\Enum;
 use App\Models\UserCommunity;
 use App\Services\BatchContributionService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -93,7 +94,7 @@ class ContributionController extends Controller
             'contributions.*.start_date'     => 'required|date',
             'contributions.*.end_date'       => 'nullable|date|after_or_equal:contributions.*.start_date',
             'contributions.*.amount'         => 'required|numeric|min:0.01',
-            'contributions.*.payment_method' => 'required|in:' . implode(',', PaymentMethodEnum::values()),
+            'contributions.*.payment_method' => ['required', new Enum(PaymentMethodEnum::class)],
         ]);
 
         DB::beginTransaction();
@@ -103,9 +104,11 @@ class ContributionController extends Controller
                 Contribution::create([
                     'financial_entity_id' => $request->input('financial_entity_id'),
                     'member_id'           => $entry['member_id'],
-                    'community_id'        => $communityId,           // sempre a comunidade do usuário "sec"
+                    'community_id'        => $communityId,
                     'type'                => $entry['type'],
-                    'contribution_date'   => $entry['contribution_date'],
+                    'contribution_date'   => $entry['contribution_date'], // Data de criação/lançamento
+                    'paid_at'             => $entry['contribution_date'], // Alimenta com a mesma data do lançamento
+                    'is_paid'             => true,                        // Marca como pago
                     'start_date'          => $entry['start_date'],
                     'end_date'            => $entry['type'] === 'periodo'
                         ? ($entry['end_date'] ?? null)
