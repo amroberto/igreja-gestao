@@ -37,25 +37,27 @@
         </div>
         <div class="card-body">
             <div class="row">
-                <div class="mb-2 col-md-2 col-sm-6">
+                <div class="col-md-3 col-sm-6">
                     <strong><i class="mr-1 fas fa-id-badge"></i> {{ __('ID do Membro') }}:</strong>
                     <p class="text-muted">{{ $member->id }}</p>
                 </div>
-                <div class="mb-4 col-md-4 col-sm-6">
+            </div>
+            <div class="row">
+                <div class="mb-3 col-md-3 col-sm-6">
                     <strong><i class="mr-1 fas fa-user"></i> {{ __('Nome Completo') }}:</strong>
                     <p class="text-muted">{{ $member->name ?: 'N/A' }}</p>
                 </div>
-                <div class="mb-2 col-md-2 col-sm-6">
+                <div class="mb-3 col-md-3 col-sm-6">
                     <strong><i class="mr-1 fas fa-calendar-alt"></i> {{ __('Data de Nascimento') }}:</strong>
                     <p class="text-muted">{{ $member->birth_date ? $member->birth_date->format('d/m/Y') : 'N/A' }}</p>
                 </div>
-                <div class="mb-2 col-md-2 col-sm-6">
+                <div class="mb-3 col-md-3 col-sm-6">
                     <strong><i class="mr-1 fas fa-ring"></i> {{ __('Estado Civil') }}:</strong>
                     <p class="text-muted">{{ $member->marital_status ? ucfirst($member->marital_status) : 'N/A' }}</p>
                 </div>
-                <div class="mb-2 col-md-2 col-sm-6">
+                <div class="mb-3 col-md-3 col-sm-6">
                     <strong><i class="mr-1 fas fa-venus-mars"></i> {{ __('Gênero') }}:</strong>
-                    <p class="text-muted">{{ $member->gender?->label() }}</p>
+                    <p class="text-muted">{{ $member->gender?->label() ?? __('Não informado') }}</p>
                 </div>
             </div>
             <div class="row">
@@ -67,12 +69,10 @@
                     <strong><i class="mr-1 fas fa-id-badge"></i> {{ __('RG') }}:</strong>
                     <p class="text-muted">{{ formatRg($member->rg) }}</p>
                 </div>
-                {{-- membro ativo (is_active)  --}}
                 <div class="mb-3 col-md-3 col-sm-6">
-                    <strong><i class="mr-1 fas fa-check"></i> {{ __('Membro Ativo') }}:</strong>
-                    <p class="text-muted">{{ $member->is_active ? __('Sim') : __('Não') }}</p>
+                    <strong><i class="mr-1 fas fa-toggle-on"></i> {{ __('Status') }}:</strong>
+                    <p class="text-muted">{{ $member->is_active ? __('Ativo') : __('Inativo') }}</p>
                 </div>
-                {{-- membro contribuinte (is_contributor)  --}}
                 <div class="mb-3 col-md-3 col-sm-6">
                     <strong><i class="mr-1 fas fa-hand-holding-usd"></i> {{ __('Contribuinte') }}:</strong>
                     <p class="text-muted">{{ $member->is_contributor ? __('Sim') : __('Não') }}</p>
@@ -168,67 +168,125 @@
         </div>
     </div>
 
-    <!-- Informações de contribuição mensal-->
-    <div class="card card-secondary card-outline">
+    <!-- 1. Contribuições Quitadas / Lançadas -->
+    <div class="card card-success card-outline">
         <div class="card-header">
-            <h3 class="card-title"><i class="mr-2 fas fa-hand-holding-usd"></i>{{ __('Informações de Contribuição Mensal') }}</h3>
+            <h3 class="card-title">
+                <i class="mr-2 fas fa-check-circle text-success"></i>{{ __('Últimas Contribuições Quitadas / Lançadas') }}
+            </h3>
         </div>
         <div class="card-body">
-            <div class="row">
-                <div class="mb-3 col-md-3 col-sm-12">
-                    <strong><i class="mr-1 fas fa-calendar-alt"></i> {{ __('Método de Pagamento') }}:</strong>
-                    <p class="text-muted">{{ $member->payment_method ?: 'N/A' }}</p>
-                </div>
-                <!-- delivery method -->
-                <div class="mb-3 col-md-3 col-sm-12">
-                    <strong><i class="mr-1 fas fa-truck"></i> {{ __('Método de Entrega') }}:</strong>
-                    <p class="text-muted">{{ $member->delivery_method ?: 'N/A' }}</p>
-                </div>
-                <div class="mb-3 col-md-3 col-sm-12">
-                    <strong><i class="mr-1 fas fa-money-bill-wave"></i> {{ __('Valor mensal') }}:</strong>
-                    <p class="text-muted">R$ {{ number_format($member->amount, 2, ',', '.') }}</p>
-                </div>
-                <!-- DIA DO MÊS - DUE_DATE -->
-                <div class="mb-3 col-md-3 col-sm-12">
-                    <strong><i class="mr-1 fas fa-calendar-day"></i> {{ __('Dia do Mês') }}:</strong>
-                    <p class="text-muted">{{ $member->due_date ?: 'N/A' }}</p>
-                </div>
-            </div>
-        </div>
-
-    <!-- Contribuições -->
-    <div class="card card-danger card-outline">
-        <div class="card-header">
-            <h3 class="card-title"><i class="mr-2 fas fa-donate"></i>{{ __('Contribuições') }}</h3>
-        </div>
-        <div class="card-body">
-            @if ($member->contributions->isEmpty())
-            <p class="text-muted"><i class="mr-1 fas fa-info-circle"></i> {{ __('Nenhuma contribuição registrada.') }}</p>
+            @if ($member->confirmedContributions->isEmpty())
+                <p class="text-muted mb-0"><i class="mr-1 fas fa-info-circle"></i> {{ __('Nenhuma contribuição quitada registrada.') }}</p>
             @else
-            <div class="table-responsive">
-                <table class="table table-hover table-bordered">
-                    <thead class="bg-primary">
-                        <tr>
-                            <th>{{ __('Data') }}</th>
-                            <th>{{ __('Comunidade') }}</th>
-                            <th>{{ __('Forma de Pagamento') }}</th>
-                            <th>{{ __('Período') }}</th>
-                            <th>{{ __('Valor') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($member->contributions as $contribution)
-                        <tr>
-                            <td>{{ $contribution->contribution_date ? $contribution->contribution_date->format('d/m/Y') : 'N/A' }}</td>
-                            <td>{{ $contribution->community ? $contribution->community->name : 'N/A' }}</td>
-                            <td>{{ $contribution->payment_method ?: 'N/A' }}</td>
-                            <td>{{ $contribution->period ?: 'N/A' }}</td>
-                            <td>R$ {{ number_format($contribution->amount, 2, ',', '.') }}</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered">
+                        <thead class="bg-success">
+                            <tr>
+                                <th style="width: 140px;">{{ __('Nº Documento') }}</th>
+                                <th>{{ __('Data Pagto') }}</th>
+                                <th>{{ __('Referência / Período') }}</th>
+                                <th>{{ __('Tipo') }}</th>
+                                <th>{{ __('Comunidade') }}</th>
+                                <th>{{ __('Forma') }}</th>
+                                <th>{{ __('Valor') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($member->confirmedContributions as $contribution)
+                            <tr>
+                                <td>
+                                    <span class="badge badge-light border">
+                                        #{{ str_pad($contribution->id, 6, '0', STR_PAD_LEFT) }}
+                                    </span>
+                                </td>
+                                <td>{{ $contribution->contribution_date ? $contribution->contribution_date->format('d/m/Y') : 'N/A' }}</td>
+                                <td>{{ $contribution->period ?: ($contribution->description ?: 'N/A') }}</td>
+                                <td>{{ ucfirst($contribution->type ?? 'Mensal') }}</td>
+                                <td>{{ $contribution->community ? $contribution->community->name : 'N/A' }}</td>
+                                <td>
+                                    @if ($contribution->payment_method)
+                                        @php
+                                            $paymentMethod = $contribution->payment_method;
+                                            if (is_string($paymentMethod)) {
+                                                try {
+                                                    $paymentMethod = \App\Enums\PaymentMethodEnum::from($paymentMethod);
+                                                } catch (\ValueError $e) {
+                                                    $paymentMethod = null;
+                                                }
+                                            }
+                                            echo $paymentMethod?->label() ?? 'N/A';
+                                        @endphp
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
+                                <td>R$ {{ number_format($contribution->amount, 2, ',', '.') }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    <!-- 2. Contribuições em Aberto (Consulta de Nº Doc) -->
+    <div class="card card-warning card-outline">
+        <div class="card-header">
+            <h3 class="card-title text-dark">
+                <i class="mr-2 fas fa-exclamation-circle text-warning"></i>{{ __('Contribuições em Aberto (Últimas 10)') }}
+            </h3>
+        </div>
+        <div class="card-body">
+            @if ($member->pendingContributions->isEmpty())
+                <p class="text-muted mb-0"><i class="mr-1 fas fa-check-circle text-success"></i> {{ __('Nenhuma contribuição em aberto para este membro.') }}</p>
+            @else
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered">
+                        <thead class="bg-warning text-dark">
+                            <tr>
+                                <th style="width: 140px;">{{ __('Nº Documento') }}</th>
+                                <th>{{ __('Vencimento') }}</th>
+                                <th>{{ __('Referência / Período') }}</th>
+                                <th>{{ __('Tipo') }}</th>
+                                <th>{{ __('Forma') }}</th>
+                                <th>{{ __('Valor') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($member->pendingContributions as $contribution)
+                            <tr>
+                                <td>
+                                    <span class="badge badge-dark p-2" style="font-size: 0.95rem;">
+                                        #{{ str_pad($contribution->id, 6, '0', STR_PAD_LEFT) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    @php
+                                        $dueDate = $contribution->due_date ? \Carbon\Carbon::parse($contribution->due_date) : $contribution->contribution_date;
+                                    @endphp
+                                    {{ $dueDate ? $dueDate->format('d/m/Y') : 'N/A' }}
+                                </td>
+                                <td>{{ $contribution->period ?: ($contribution->description ?: 'N/A') }}</td>
+                                <td>{{ ucfirst($contribution->type ?? 'Mensal') }}</td>
+                                <td>
+                                    @php
+                                        $methodVal = is_object($contribution->payment_method)
+                                            ? strtolower($contribution->payment_method->value ?? '')
+                                            : strtolower($contribution->payment_method ?? '');
+                                        $isPix = str_contains($methodVal, 'pix');
+                                    @endphp
+                                    <span class="badge {{ $isPix ? 'badge-success' : 'badge-danger' }}">
+                                        {{ $isPix ? 'PIX' : 'Boleto' }}
+                                    </span>
+                                </td>
+                                <td><strong>R$ {{ number_format($contribution->amount, 2, ',', '.') }}</strong></td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             @endif
         </div>
         <div class="card-footer">
@@ -257,11 +315,9 @@
     .card:hover {
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
-
 </style>
 @stop
 
 @section('js')
 @parent
-<!-- Nenhum script adicional necessário -->
 @stop

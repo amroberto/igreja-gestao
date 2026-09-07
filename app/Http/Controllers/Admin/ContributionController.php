@@ -3,23 +3,23 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Member;
-use App\Exports\ContributionsByFinancialEntityExport;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\ContributionsByCommunityExport;
 use App\Models\Community;
 use App\Models\Contribution;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 use App\Models\FinancialEntity;
 use App\Models\ParochialUnion;
 use App\Enums\PaymentMethodEnum;
 use App\Http\Controllers\Controller;
+use App\Exports\ContributionsByFinancialEntityExport;
+use App\Exports\ContributionsByCommunityExport;
+use App\Exports\ContributionsByPeriodExport;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use NumberToWords\NumberToWords;
-use Dompdf\Dompdf;
-use Dompdf\Options;
+use Illuminate\Validation\Rule;
 
 class ContributionController extends Controller
 {
@@ -30,8 +30,8 @@ class ContributionController extends Controller
     {
         $contributions = Contribution::where('status', 'confirmed')
             ->where('financial_entity_id', '1')
-            ->orderBy('contribution_date', 'desc')
-            ->orderBy('created_at', 'desc')
+            ->orderByRaw('COALESCE(paid_at, contribution_date) DESC')
+            ->orderBy('id', 'desc')
             ->paginate(10);
 
         return view('admin.contributions.index', compact('contributions'));
@@ -70,7 +70,7 @@ class ContributionController extends Controller
         $request->validate([
             'financial_entity_id' => [
                 'required',
-                'exists:financial_entities,id',
+                self::EXISTS_FINANCIAL_ENTITY_RULE,
                 function ($attribute, $value, $fail) {
                     if ((int)$value !== 1) {
                         $fail('Apenas a entidade financeira ID 1 é permitida.');
@@ -80,7 +80,7 @@ class ContributionController extends Controller
             'contributions' => 'required|array|min:1',
             'contributions.*.member_id' => 'required|integer|exists:members,id',
             'contributions.*.type' => 'required|in:mensal,periodo',
-            'contributions.*.contribution_date' => 'required|date',
+            'contributions.*.contribution_date' => self::REQUIRED_DATE_RULE,
             'contributions.*.start_date' => 'required|date_format:Y-m',
             'contributions.*.end_date' => 'nullable|date_format:Y-m|after_or_equal:contributions.*.start_date',
             'contributions.*.amount' => 'required|numeric|min:0.01',
@@ -93,7 +93,6 @@ class ContributionController extends Controller
             foreach ($request->contributions as $entry) {
                 $member = Member::findOrFail($entry['member_id']);
 
-                // Converte "YYYY-MM" para data completa (primeiro dia do mês para start, último para end)
                 $startDate = \Carbon\Carbon::createFromFormat('Y-m', $entry['start_date'])
                     ->startOfMonth()
                     ->format('Y-m-d');
@@ -106,7 +105,7 @@ class ContributionController extends Controller
                 }
 
                 Contribution::create([
-                    'financial_entity_id' => 1,  // fixo
+                    'financial_entity_id' => 1,
                     'member_id'           => $entry['member_id'],
                     'community_id'        => $member->community_id,
                     'type'                => $entry['type'],
@@ -116,6 +115,8 @@ class ContributionController extends Controller
                     'amount'              => $entry['amount'],
                     'payment_method'      => $entry['payment_method'],
                     'status'              => 'confirmed',
+                    'is_paid'             => true,
+                    'paid_at'             => $entry['contribution_date'],
                 ]);
             }
 
@@ -126,8 +127,7 @@ class ContributionController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            // Log detalhado para debug
-            \Log::error('Falha ao salvar contribuições', [
+            Log::error('Falha ao salvar contribuições', [
                 'error'   => $e->getMessage(),
                 'trace'   => $e->getTraceAsString(),
                 'request' => $request->except(['_token']),
@@ -139,14 +139,12 @@ class ContributionController extends Controller
         }
     }
 
-
     public function generateReceipt($id)
     {
         $contribution = Contribution::with('member')->findOrFail($id);
 
         $receiptNumber = str_pad($contribution->id, 6, '0', STR_PAD_LEFT);
 
-        // Valor por extenso
         $numberToWords = new NumberToWords();
         $numberTransformer = $numberToWords->getNumberTransformer('pt_BR');
         $valor = number_format($contribution->amount, 2, '.', '');
@@ -174,11 +172,23 @@ class ContributionController extends Controller
         return $pdf->download("recibo_{$receiptNumber}-CodMe{$contribution->member->id}.pdf");
     }
 
-    public function show(Contribution $contribution)
+    public function show(Member $member)
     {
-        $this->authorize('view', $contribution);
+        try {
+            $member->load([
+                'community',
+                'confirmedContributions' => function ($query) {
+                    $query->take(10);
+                },
+                'pendingContributions' => function ($query) {
+                    $query->take(10);
+                }
+            ]);
 
-        return view('admin.contributions.show', compact('contribution'));
+            return view('admin.members.show', compact('member'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.members.index')->with('error', 'Erro ao carregar membro: ' . $e->getMessage());
+        }
     }
 
     public function edit(Contribution $contribution)
@@ -201,7 +211,7 @@ class ContributionController extends Controller
         $request->validate([
             'financial_entity_id' => [
                 'required',
-                'exists:financial_entities,id',
+                self::EXISTS_FINANCIAL_ENTITY_RULE,
                 function ($attribute, $value, $fail) use ($communityId) {
                     if (!FinancialEntity::where('id', $value)->where('community_id', $communityId)->exists()) {
                         $fail('A entidade financeira selecionada é inválida.');
@@ -258,8 +268,8 @@ class ContributionController extends Controller
     public function generateReportByFinancialEntity(Request $request)
     {
         $request->validate([
-            'financial_entity_id' => 'required|exists:financial_entities,id',
-            'start_date' => 'required|date',
+            'financial_entity_id' => self::EXISTS_FINANCIAL_ENTITY_RULE,
+            'start_date' => self::REQUIRED_DATE_RULE,
             'end_date'   => 'required|date|after_or_equal:start_date',
         ]);
 
@@ -291,7 +301,6 @@ class ContributionController extends Controller
             ));
         }
 
-        // PDF (padrão)
         $pdf = Pdf::loadView('admin.contributions.reports.by_financial_entity_pdf', compact(
             'contributions', 'financialEntity', 'parochialUnion', 'generatedBy', 'date', 'request'
         ));
@@ -302,7 +311,7 @@ class ContributionController extends Controller
     public function generateReportByPeriod(Request $request)
     {
         $request->validate([
-            'start_date' => 'required|date',
+            'start_date' => self::REQUIRED_DATE_RULE,
             'end_date'   => 'required|date|after_or_equal:start_date',
         ]);
 
@@ -332,7 +341,6 @@ class ContributionController extends Controller
             ));
         }
 
-        // Default: PDF
         $pdf = Pdf::loadView('admin.contributions.reports.by_period_pdf', compact(
             'contributions',
             'parochialUnion',
@@ -349,7 +357,7 @@ class ContributionController extends Controller
     private function exportToExcel($contributions, $request)
     {
         return Excel::download(
-            new \App\Exports\ContributionsByPeriodExport($contributions, $request),
+            new ContributionsByPeriodExport($contributions, $request),
             "relatorio_contribuicoes_todas_comunidades_{$request->start_date}_a_{$request->end_date}.xlsx"
         );
     }
@@ -370,7 +378,7 @@ class ContributionController extends Controller
     {
         $request->validate([
             'community_id' => 'required|exists:communities,id',
-            'start_date'   => 'required|date',
+            'start_date'   => self::REQUIRED_DATE_RULE,
             'end_date'     => 'required|date|after_or_equal:start_date',
         ]);
 
@@ -401,11 +409,108 @@ class ContributionController extends Controller
             ));
         }
 
-        // PDF
         $pdf = Pdf::loadView('admin.contributions.reports.by_community_pdf', compact(
             'contributions', 'community', 'parochialUnion', 'generatedBy', 'date', 'request'
         ));
 
         return $pdf->download("relatorio_contribuicoes_{$community->name}_{$request->start_date}_a_{$request->end_date}.pdf");
+    }
+
+    /**
+     * Exibe a tela do formulário para dar baixa por documento.
+     */
+    public function payoffForm()
+    {
+        return view('admin.contributions.payoff');
+    }
+
+    /**
+     * Busca os dados da contribuição pendente para o Fetch via JSON.
+     */
+    public function findPendingDocument($id)
+    {
+        $contribution = Contribution::with('member')
+            ->where('id', $id)
+            ->where(function ($q) {
+                $q->where('status', 'pending')->orWhere('is_paid', false);
+            })
+            ->first();
+
+        if (!$contribution) {
+            return response()->json([
+                'message' => 'Nenhuma contribuição em aberto encontrada para o Nº Documento #' . $id
+            ], 404);
+        }
+
+        $startDateFormatted = $contribution->start_date 
+            ? \Carbon\Carbon::parse($contribution->start_date)->format('Y-m') 
+            : null;
+
+        $paymentMethodValue = is_object($contribution->payment_method) 
+            ? $contribution->payment_method->value 
+            : $contribution->payment_method;
+
+        return response()->json([
+            'id' => $contribution->id,
+            'member_id' => $contribution->member->id ?? '-',
+            'member_name' => $contribution->member ? $contribution->member->name : 'N/A',
+            'amount' => $contribution->amount,
+            'start_date' => $startDateFormatted,
+            'payment_method' => $paymentMethodValue,
+        ]);
+    }
+
+    /**
+     * Registra as baixas de contribuições submetidas pelo formulário Payoff.
+     */
+    public function storePayoff(Request $request)
+    {
+        $request->validate([
+            'payoffs' => 'required|array|min:1',
+            'payoffs.*.contribution_id' => 'required|exists:contributions,id',
+            'payoffs.*.amount' => 'required|numeric|min:0.01',
+            'payoffs.*.paid_at' => self::REQUIRED_DATE_RULE,
+            'payoffs.*.payment_method' => ['required', Rule::enum(PaymentMethodEnum::class)],
+            'payoffs.*.type' => 'required|in:mensal,periodo',
+            'payoffs.*.end_date' => 'nullable|required_if:payoffs.*.type,periodo|date_format:Y-m',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            foreach ($request->payoffs as $entry) {
+                $contribution = Contribution::findOrFail($entry['contribution_id']);
+
+                $endDate = null;
+                if ($entry['type'] === 'periodo' && !empty($entry['end_date'])) {
+                    $endDate = \Carbon\Carbon::createFromFormat('Y-m', $entry['end_date'])
+                        ->endOfMonth()
+                        ->format('Y-m-d');
+                }
+
+                $contribution->update([
+                    'status' => 'confirmed',
+                    'is_paid' => true,
+                    'paid_at' => $entry['paid_at'],
+                    'contribution_date' => $entry['paid_at'],
+                    'amount' => $entry['amount'],
+                    'payment_method' => $entry['payment_method'],
+                    'type' => $entry['type'],
+                    'end_date' => $endDate,
+                ]);
+            }
+
+            DB::commit();
+
+            return redirect()->route('admin.contributions.index')
+                ->with('success', 'Baixa(s) de contribuição efetuada(s) com sucesso!');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Erro ao efetuar baixa de contribuição', ['error' => $e->getMessage()]);
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Erro ao registrar baixa(s): ' . $e->getMessage());
+        }
     }
 }

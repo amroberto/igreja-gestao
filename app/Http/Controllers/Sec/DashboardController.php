@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use App\Models\Member;
 use App\Models\Community;
 use App\Models\Contribution;
+use App\Enums\PaymentMethodEnum;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
@@ -21,16 +22,18 @@ class DashboardController extends Controller
 
         if ($communities->isEmpty()) {
             return view('sec.dashboard', [
-                'error'                 => 'Nenhuma comunidade associada ao usuário.',
-                'communities'           => collect(),
-                'membrosCadastrados'    => 0,
-                'totalContribuintes'    => 0,
-                'totalContribuicoesMes'  => 0,
-                'totalContribuicoesAno'  => 0,
-                'contribuicoesPorMes'   => ['labels' => [], 'data' => []],
-                'crescimentoMembros'    => ['labels' => [], 'data' => []],
-                'membrosPorFaixaEtaria' => ['labels' => [], 'data' => []],
-                'selectedCommunityId'   => null,
+                'error'                          => 'Nenhuma comunidade associada ao usuário.',
+                'communities'                    => collect(),
+                'membrosCadastrados'             => 0,
+                'totalContribuintes'             => 0,
+                'totalContribuicoesMes'           => 0,
+                'totalContribuicoesAno'           => 0,
+                'contribuicoesPorMes'            => ['labels' => [], 'data' => []],
+                'crescimentoMembros'             => ['labels' => [], 'data' => []],
+                'membrosPorFaixaEtaria'          => ['labels' => [], 'data' => []],
+                'contribuicoesPorMetodoPagamento' => ['labels' => [], 'data' => []],
+                'contribuicoesPorEntidade'       => ['labels' => [], 'data' => []],
+                'selectedCommunityId'            => null,
             ]);
         }
 
@@ -52,23 +55,29 @@ class DashboardController extends Controller
             ->where('is_contributor', true)
             ->count();
 
-        // Contribuições confirmadas
+        // Contribuições confirmadas/pagas no mês e no ano
         $totalContribuicoesMes = Contribution::where('community_id', $selectedCommunityId)
-            ->where('status', 'confirmed')
-            ->whereMonth('contribution_date', $now->month)
-            ->whereYear('contribution_date', $now->year)
+            ->where(function ($q) {
+                $q->where('status', 'confirmed')->orWhere('is_paid', true);
+            })
+            ->whereRaw('MONTH(COALESCE(paid_at, contribution_date)) = ?', [$now->month])
+            ->whereRaw('YEAR(COALESCE(paid_at, contribution_date)) = ?', [$now->year])
             ->sum('amount');
 
         $totalContribuicoesAno = Contribution::where('community_id', $selectedCommunityId)
-            ->where('status', 'confirmed')
-            ->whereYear('contribution_date', $now->year)
+            ->where(function ($q) {
+                $q->where('status', 'confirmed')->orWhere('is_paid', true);
+            })
+            ->whereRaw('YEAR(COALESCE(paid_at, contribution_date)) = ?', [$now->year])
             ->sum('amount');
 
-        // Gráfico: Contribuições por mês
+        // 1. Gráfico: Contribuições por mês
         $contribuicoesPorMesRaw = Contribution::where('community_id', $selectedCommunityId)
-            ->where('status', 'confirmed')
-            ->whereYear('contribution_date', $now->year)
-            ->selectRaw('MONTH(contribution_date) as mes, SUM(amount) as total')
+            ->where(function ($q) {
+                $q->where('status', 'confirmed')->orWhere('is_paid', true);
+            })
+            ->whereRaw('YEAR(COALESCE(paid_at, contribution_date)) = ?', [$now->year])
+            ->selectRaw('MONTH(COALESCE(paid_at, contribution_date)) as mes, SUM(amount) as total')
             ->groupBy('mes')
             ->orderBy('mes')
             ->get();
@@ -76,6 +85,57 @@ class DashboardController extends Controller
         $contribuicoesPorMes = [
             'labels' => $contribuicoesPorMesRaw->map(fn($item) => Carbon::create()->month($item->mes)->translatedFormat('M'))->toArray(),
             'data'   => $contribuicoesPorMesRaw->pluck('total')->map(fn($v) => (float) $v)->toArray(),
+        ];
+
+        // 2. Gráfico: Contribuições por Método de Pagamento no ano (Tratamento seguro para Enum Cast)
+        $contribuicoesPorMetodoRaw = Contribution::where('community_id', $selectedCommunityId)
+            ->where(function ($q) {
+                $q->where('status', 'confirmed')->orWhere('is_paid', true);
+            })
+            ->whereRaw('YEAR(COALESCE(paid_at, contribution_date)) = ?', [$now->year])
+            ->selectRaw('payment_method, SUM(amount) as total')
+            ->groupBy('payment_method')
+            ->get();
+
+        $metodoLabels = [];
+        $metodoData = [];
+
+        foreach ($contribuicoesPorMetodoRaw as $item) {
+            $paymentMethod = $item->payment_method;
+
+            if ($paymentMethod instanceof PaymentMethodEnum) {
+                $label = method_exists($paymentMethod, 'label') ? $paymentMethod->label() : $paymentMethod->name;
+            } elseif (is_string($paymentMethod) || is_int($paymentMethod)) {
+                $enum = PaymentMethodEnum::tryFrom($paymentMethod);
+                $label = $enum && method_exists($enum, 'label') ? $enum->label() : ucfirst((string) $paymentMethod);
+            } else {
+                $label = 'Outro';
+            }
+
+            $metodoLabels[] = $label;
+            $metodoData[] = (float) $item->total;
+        }
+
+        $contribuicoesPorMetodoPagamento = [
+            'labels' => $metodoLabels,
+            'data'   => $metodoData,
+        ];
+
+        // 3. Gráfico: Contribuições por Entidade Financeira no ano
+        $contribuicoesPorEntidadeRaw = Contribution::from('contributions as c')
+            ->join('financial_entities as fe', 'c.financial_entity_id', '=', 'fe.id')
+            ->where('c.community_id', $selectedCommunityId)
+            ->where(function ($q) {
+                $q->where('c.status', 'confirmed')->orWhere('c.is_paid', true);
+            })
+            ->whereRaw('YEAR(COALESCE(c.paid_at, c.contribution_date)) = ?', [$now->year])
+            ->selectRaw('fe.name as entidade, SUM(c.amount) as total')
+            ->groupBy('fe.name')
+            ->get();
+
+        $contribuicoesPorEntidade = [
+            'labels' => $contribuicoesPorEntidadeRaw->pluck('entidade')->toArray(),
+            'data'   => $contribuicoesPorEntidadeRaw->pluck('total')->map(fn($v) => (float) $v)->toArray(),
         ];
 
         // Gráfico: Crescimento de membros por mês
@@ -91,7 +151,7 @@ class DashboardController extends Controller
             'data'   => $crescimentoMembrosRaw->pluck('total')->toArray(),
         ];
 
-        // Faixa etária – uma única query eficiente
+        // Faixa etária
         $faixasRaw = Member::where('community_id', $selectedCommunityId)
             ->selectRaw("
                 CASE
@@ -144,6 +204,8 @@ class DashboardController extends Controller
             'totalContribuicoesMes',
             'totalContribuicoesAno',
             'contribuicoesPorMes',
+            'contribuicoesPorMetodoPagamento',
+            'contribuicoesPorEntidade',
             'crescimentoMembros',
             'membrosPorFaixaEtaria',
             'error'

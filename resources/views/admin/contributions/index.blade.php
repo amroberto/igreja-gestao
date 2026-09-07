@@ -5,7 +5,7 @@
 @section('content_header')
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}"><i class="fas fa-home"></i> {{ __('Home') }}</a></li>
+        <li class="breadcrumb-item"><a href="{{ route('sec.dashboard') }}"><i class="fas fa-home"></i> {{ __('Home') }}</a></li>
         <li class="breadcrumb-item active" aria-current="page">{{ __('Contribuições') }}</li>
     </ol>
 </nav>
@@ -25,9 +25,12 @@
         </x-adminlte-alert>
         @endif
 
-        <!-- Botão de Criar -->
-        <div class="mb-3">
-            <a href="{{ route('admin.contributions.create') }}" class="btn btn-primary">
+        <!-- Botões de Ação -->
+        <div class="mb-3 d-flex flex-wrap gap-2">
+            <a href="{{ route('sec.contributions.payoff.form') }}" class="btn btn-success mr-2">
+                <i class="fas fa-check-circle"></i> {{ __('Dar Baixa por Documento') }}
+            </a>
+            <a href="{{ route('sec.contributions.create') }}" class="btn btn-primary">
                 <i class="fas fa-plus"></i> {{ __('Nova Contribuição') }}
             </a>
         </div>
@@ -51,11 +54,11 @@
                 @forelse ($contributions as $contribution)
                 <tr>
                     <td>{{ $contribution->id }}</td>
-                    <td>{{ $contribution->contribution_date->format('d/m/Y') }}</td>
-                    <td>{{ $contribution->member->id }}</td>
-                    <td>{{ $contribution->member->name }}</td>
+                    <td>{{ $contribution->contribution_date ? $contribution->contribution_date->format('d/m/Y') : '' }}</td>
+                    <td>{{ $contribution->member->id ?? '-' }}</td>
+                    <td>{{ $contribution->member->name ?? '-' }}</td>
                     <td>{{ $contribution->community->name ?? __('Nenhuma') }}</td>
-                    <td>{{ $contribution->payment_method->label() }}</td>
+                    <td>{{ $contribution->payment_method?->label() ?? '-' }}</td>
                     <td>{{ $contribution->period }}</td>
                     <td>R$ {{ number_format($contribution->amount, 2, ',', '.') }}</td>
                     <td>
@@ -66,9 +69,9 @@
 
                         <!-- Modal de Confirmação de Exclusão -->
                         <x-adminlte-modal id="deleteModal-{{ $contribution->id }}" title="{{ __('Confirmar Exclusão') }}" theme="danger" icon="fas fa-trash" size="sm">
-                            <p>{{ __('Tem certeza que deseja excluir a contribuição') }} <strong>{{ $contribution->document_number }}</strong>?</p>
+                            <p>{{ __('Tem certeza que deseja excluir a contribuição') }} <strong>#{{ $contribution->id }}</strong>?</p>
                             <x-slot name="footerSlot">
-                                <form action="{{ route('admin.contributions.destroy', $contribution) }}" method="POST" class="d-inline">
+                                <form action="{{ route('sec.contributions.destroy', $contribution) }}" method="POST" class="d-inline">
                                     @csrf
                                     @method('DELETE')
                                     <x-adminlte-button type="submit" theme="danger" label="{{ __('Excluir') }}" />
@@ -78,7 +81,7 @@
                         </x-adminlte-modal>
 
                         <!-- Botão para Gerar Recibo -->
-                        <a href="{{ route('admin.contributions.receipt', $contribution->id) }}" class="ml-1 btn btn-success btn-sm" title="{{ __('Gerar Recibo') }}">
+                        <a href="{{ route('sec.contributions.receipt', $contribution->id) }}" class="btn btn-success btn-sm ml-1" title="{{ __('Gerar Recibo') }}">
                             <i class="fas fa-file-pdf"></i>
                         </a>
 
@@ -115,7 +118,6 @@
             overflow-x: auto;
         }
     }
-
 </style>
 @stop
 
@@ -126,70 +128,41 @@
 <script>
     $(document).ready(function() {
         $('#contributions').DataTable({
-                    language: {
-                        emptyTable: "{{ __('Nenhum registro encontrado') }}"
-                        , info: "{{ __('Mostrando de _START_ até _END_ de _TOTAL_ registros') }}"
-                        , infoEmpty: "{{ __('Mostrando 0 até 0 de 0 registros') }}"
-                        , infoFiltered: "{{ __('(Filtrados de _MAX_ registros)') }}"
-                        , lengthMenu: "{{ __('Mostrar _MENU_ registros') }}"
-                        , loadingRecords: "{{ __('Carregando...') }}"
-                        , processing: "{{ __('Processando...') }}"
-                        , search: "{{ __('Pesquisar') }}"
-                        , zeroRecords: "{{ __('Nenhum registro encontrado') }}"
-                        , paginate: {
-                            next: "{{ __('Próximo') }}"
-                            , previous: "{{ __('Anterior') }}"
-                        }
-                    }
-                    , responsive: true
-                    , autoWidth: false
-                    , columnDefs: [{
-                            width: '6%'
-                            , targets: 0
-                        }, // Nº Doc.
-                        {
-                            width: '9%'
-                            , targets: 1
-                        }, // Data
-                        {
-                            width: '8%'
-                            , targets: 2
-                        }, // Cod. Membro
-                        {
-                            width: '15%'
-                            , targets: 3
-                        }, // Nome Membro
-                        {
-                            width: '14%'
-                            , targets: 4
-                        }, // Comunidade
-                        {
-                            width: '14%'
-                            , targets: 5
-                        }, // Forma de Pagamento
-                        {
-                            width: '10%'
-                            , targets: 6
-                        }, // Período
-                        {
-                            width: '10%'
-                            , targets: 7
-                        }, // Valor
-                        {
-                            width: '14%'
-                            , targets: 8
-                        }, // Ações
-                    ]
-                , ]
-            , ]
-            , order: [
+            language: {
+                emptyTable: "{{ __('Nenhum registro encontrado') }}",
+                info: "{{ __('Mostrando de _START_ até _END_ de _TOTAL_ registros') }}",
+                infoEmpty: "{{ __('Mostrando 0 até 0 de 0 registros') }}",
+                infoFiltered: "{{ __('(Filtrados de _MAX_ registros)') }}",
+                lengthMenu: "{{ __('Mostrar _MENU_ registros') }}",
+                loadingRecords: "{{ __('Carregando...') }}",
+                processing: "{{ __('Processando...') }}",
+                search: "{{ __('Pesquisar') }}",
+                zeroRecords: "{{ __('Nenhum registro encontrado') }}",
+                paginate: {
+                    next: "{{ __('Próximo') }}",
+                    previous: "{{ __('Anterior') }}"
+                }
+            },
+            responsive: true,
+            autoWidth: false,
+            columnDefs: [
+                { width: '6%', targets: 0 },  // Nº Doc.
+                { width: '9%', targets: 1 },  // Data
+                { width: '8%', targets: 2 },  // Cod. Membro
+                { width: '15%', targets: 3 }, // Nome Membro
+                { width: '14%', targets: 4 }, // Comunidade
+                { width: '13%', targets: 5 }, // Forma de Pagamento
+                { width: '9%', targets: 6 },  // Período
+                { width: '10%', targets: 7 }, // Valor
+                { width: '15%', targets: 8 }  // Ações
+            ],
+            order: [
                 [0, 'desc']
-            ] // Ordenar por número da carta (mais recente primeiro)
-    });
+            ] // Ordenar por número do documento (mais recente primeiro)
+        });
 
-    // Inicializar tooltips
-    $('[data-toggle="tooltip"]').tooltip();
+        // Inicializar tooltips
+        $('[data-toggle="tooltip"]').tooltip();
     });
-
 </script>
 @stop
