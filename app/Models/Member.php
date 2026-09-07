@@ -14,10 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Member extends Model
 {
-    /** @use HasFactory<\Database\Factories\MemberFactory> */
-    use HasFactory;
-
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'first_name',
@@ -83,9 +80,35 @@ class Member extends Model
         return $this->belongsTo(Community::class);
     }
 
-    public function contributions()
+    public function contributions(): HasMany
     {
         return $this->hasMany(Contribution::class);
+    }
+
+    /**
+     * Relação para carregar as contribuições quitadas/confirmadas (ordenadas por data decrescente)
+     */
+    public function confirmedContributions(): HasMany
+    {
+        return $this->hasMany(Contribution::class)
+            ->where(function ($q) {
+                $q->where('status', 'confirmed')->orWhere('is_paid', true);
+            })
+            ->orderBy('contribution_date', 'desc')
+            ->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Relação para carregar as contribuições em aberto/pendentes (ordenadas por data decrescente)
+     */
+    public function pendingContributions(): HasMany
+    {
+        return $this->hasMany(Contribution::class)
+            ->where(function ($q) {
+                $q->where('status', 'pending')->orWhere('is_paid', false);
+            })
+            ->orderBy('contribution_date', 'desc')
+            ->orderBy('created_at', 'desc');
     }
 
     public function getNameAttribute()

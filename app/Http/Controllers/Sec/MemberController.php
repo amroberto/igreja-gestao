@@ -139,28 +139,19 @@ class MemberController extends Controller
         try {
             Log::debug('Iniciando carregamento do membro', ['member_id' => $member->id]);
 
-            // Carrega a relação community e as últimas 10 contribuições com status confirmed e ordenadas por data descrescente
             $member->load([
                 'community',
-                'contributions' => function ($query) {
-                    $query->where('status', 'confirmed')->orderBy('contribution_date', 'desc')->take(10); // Limita a 10 contribuições
+                'confirmedContributions' => function ($query) {
+                    $query->orderBy('contribution_date', 'desc')->orderBy('created_at', 'desc')->take(10);
+                },
+                'pendingContributions' => function ($query) {
+                    $query->orderBy('contribution_date', 'desc')->orderBy('created_at', 'desc')->take(10);
                 }
-            ]);
-
-            Log::debug('Membro carregado com sucesso', [
-                'member_id' => $member->id,
-                'birth_date' => $member->birth_date,
-                'contributions_count' => $member->contributions->count(),
-                'has_community' => $member->community ? true : false
             ]);
 
             return view('sec.members.show', compact('member'));
         } catch (\Exception $e) {
-            Log::error('Erro ao carregar membro', [
-                'member_id' => $member->id ?? 'N/A',
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            Log::error('Erro ao carregar membro: ' . $e->getMessage());
             return redirect()->route('sec.members.index')->with('error', 'Erro ao carregar membro: ' . $e->getMessage());
         }
     }
