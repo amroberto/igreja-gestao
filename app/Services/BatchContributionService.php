@@ -98,10 +98,33 @@ class BatchContributionService
                     $contribution->update(['payment_method' => PaymentMethodEnum::BankSlip->value]);
                 }
 
-                if (empty($contribution->asaas_boleto_url)) {
-                    $this->gerarBoletoAsaas($contribution, $member);
-                }
+                // Verifica se JÁ EXISTE outra contribuição CONFIRMADA cobrindo qualquer parte do período
+                $hasConfirmedContribution = Contribution::where('member_id', $member->id)
+                    ->where('id', '!=', $contribution->id)
+                    ->where('status', 'confirmed')
+                    ->where(function ($query) use ($startDate, $endDate) {
+                        $query->whereBetween('start_date', [$startDate, $endDate])
+                                ->orWhere(function ($query) use ($startDate, $endDate) {
+                                    $query->whereNotNull('end_date')
+                                            ->whereBetween('end_date', [$startDate, $endDate]);
+                                })
+                                ->orWhere(function ($query) use ($startDate, $endDate) {
+                                    $query->where('start_date', '<=', $startDate)
+                                            ->where(function ($sub) use ($endDate) {
+                                                $sub->where('end_date', '>=', $endDate)
+                                                    ->orWhereNull('end_date');
+                                            });
+                                });
+                    })->exists();
 
+                // SÓ gera o boleto no Asaas se NÃO houver contribuição confirmada no período
+                if (!$hasConfirmedContribution) {
+                    if(empty($contribution->asaas_payment_id)) {
+                        $this->gerarBoletoAsaas($contribution, $member);
+                    }
+                }else{
+                    Log::info("Membro {$member->id} já possui contribuição confirmada no período {$startDate->format('Y-m-d')} a {$endDate->format('Y-m-d')}. Boleto não será gerado.");
+                }
                 $contribution = $contribution->fresh();
             }
 
@@ -292,8 +315,43 @@ class BatchContributionService
         $isPaid = (bool) $contribution->is_paid 
             || in_array(strtolower(trim($contributionStatus)), ['paid', 'confirmed', 'pago', 'confirmado']);
 
-        // --- MESCLAGEM COM PÁGINA 2 (BOLETO) SOMENTE SE FOR BOLETO E NÃO ESTIVER PAGO ---
-        if ($isBankSlip && !$isPaid && !empty($contribution->asaas_boleto_url)) {
+
+        // Define o intervalo de verificação com base na contribuição atual ou no mês de referência
+        $startDate = $contribution->start_date 
+            ? Carbon::parse($contribution->start_date)->startOfMonth() 
+            : Carbon::parse($contribution->contribution_date)->startOfMonth();
+
+        $endDate = $contribution->end_date 
+            ? Carbon::parse($contribution->end_date)->endOfMonth() 
+            : Carbon::parse($contribution->contribution_date)->endOfMonth();
+
+        // Verifica se existe outra contribuição registrada/confirmada no período
+        $hasContributionInPeriod = Contribution::where('member_id', $member->id)
+            ->where('id', '!=', $contribution->id)
+            ->where('status', 'confirmed')
+            ->where(function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('start_date', [$startDate, $endDate])
+                      ->orWhere(function ($query) use ($startDate, $endDate) {
+                          $query->whereNotNull('end_date')
+                          ->whereBetween('end_date', [$startDate, $endDate]);
+                                })
+                                ->orWhere(function ($query) use ($startDate, $endDate) {
+                                    $query->where('start_date', '<=', $startDate)
+                                          ->where(function ($sub) use ($endDate) {
+                                              $sub->where('end_date', '>=', $endDate)
+                                                  ->orWhereNull('end_date');
+                                          });
+                                });
+            })->exists();
+
+        // Se o boleto já está pago OU se já existe contribuição confirmada no período, cancela a anexação do boleto
+        if($isPaid || $hasContributionInPeriod) {
+            Log::info("[INFO] Contribuição ID {$contribution->id} já está PAGA ou existe outra contribuição confirmada no período. Boleto não será anexado.");
+            $isBankSlip = false;
+        }
+    
+        // --- MESCLAGEM COM PÁGINA 2 (BOLETO) SOMENTE SE FOR BOLETO E NÃO ESTIVER PAGO/CONFIRMADO ---
+        if ($isBankSlip && !empty($contribution->asaas_boleto_url)) {
             Log::info("[TENTANDO MESCLAR] Baixando boleto pendente da URL: {$contribution->asaas_boleto_url}");
             $tempBoletoPath = "{$tempDir}/boleto_{$contribution->id}.pdf";
 
