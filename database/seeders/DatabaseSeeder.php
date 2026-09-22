@@ -3,12 +3,12 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
-use Database\Seeders\UsersTableSeeder;
+use Database\Seeders\AccountPlanSeeder;
 use Database\Seeders\FinancialEntitySeed;
 use Database\Seeders\ParishesTableSeeder;
 use Database\Seeders\ParochialUnionSeeder;
+use Database\Seeders\UsersTableSeeder;
+use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             FinancialEntitySeed::class,
             UsersTableSeeder::class,
             MemberSeeder::class,
+            AccountPlanSeeder::class,
         ]);
     }
 }
