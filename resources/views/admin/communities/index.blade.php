@@ -98,7 +98,19 @@
         $(document).ready(function() {
             $('#communities').DataTable({
                 language: {
-                    url: '{{ asset('vendor/datatables/lang/pt-BR.json') }}'
+                    emptyTable: "{{ __('Nenhum registro encontrado') }}",
+                    info: "{{ __('Mostrando de _START_ até _END_ de _TOTAL_ registros') }}",
+                    infoEmpty: "{{ __('Mostrando 0 até 0 de 0 registros') }}",
+                    infoFiltered: "{{ __('(Filtrados de _MAX_ registros)') }}",
+                    lengthMenu: "{{ __('Mostrar _MENU_ registros') }}",
+                    loadingRecords: "{{ __('Carregando...') }}",
+                    processing: "{{ __('Processando...') }}",
+                    search: "{{ __('Pesquisar') }}",
+                    zeroRecords: "{{ __('Nenhum registro encontrado') }}",
+                    paginate: {
+                        next: "{{ __('Próximo') }}",
+                        previous: "{{ __('Anterior') }}"
+                    }
                 },
                 responsive: true,
                 autoWidth: false,

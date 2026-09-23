@@ -1,11 +1,12 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Sec\MemberController;
-use App\Http\Controllers\Sec\DashboardController;
+use App\Http\Controllers\Sec\AccountPlanController;
 use App\Http\Controllers\Sec\ContributionController;
-use App\Http\Controllers\Sec\MonthlyConfigController;
+use App\Http\Controllers\Sec\DashboardController;
+use App\Http\Controllers\Sec\MemberController;
 use App\Http\Controllers\Sec\MemberReportController;
+use App\Http\Controllers\Sec\MonthlyConfigController;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified', 'access-sec-panel'])->prefix('sec')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('sec.dashboard');
@@ -57,5 +58,11 @@ Route::middleware(['auth', 'verified', 'access-sec-panel'])->prefix('sec')->grou
         Route::get('/', [MemberReportController::class, 'index'])->name('index');
         Route::get('/pdf', [MemberReportController::class, 'exportPdf'])->name('pdf');
         Route::get('/excel', [MemberReportController::class, 'exportExcel'])->name('excel');
+    });
+
+    // Plano de Contas
+    Route::prefix('account_plans')->name('sec.account_plans.')->group(function () {
+        Route::get('/', [AccountPlanController::class, 'index'])->name('index');
+        Route::get('/{accountPlan}', [AccountPlanController::class, 'show'])->name('show');
     });
 });

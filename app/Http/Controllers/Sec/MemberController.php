@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Sec;
 
-
 use App\Models\Member;
 use Barryvdh\DomPDF\PDF;
 use Illuminate\Http\Request;

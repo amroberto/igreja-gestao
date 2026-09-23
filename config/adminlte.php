@@ -396,11 +396,17 @@ return [
                     'icon' => 'fas fa-donate',
                     'can' => 'access-member-panel',
                 ],
+                //[
+                //    'text' => 'Categorias - Receitas Ordinárias',
+                //    'url'  => 'admin/revenue-ordinary-categories',
+                //    'icon' => 'fas fa-money-bill-wave',
+                //    'can'  => 'access-admin-panel',
+                //],
                 [
-                    'text' => 'Categorias - Receitas Ordinárias',
-                    'url'  => 'admin/revenue-ordinary-categories',
-                    'icon' => 'fas fa-money-bill-wave',
-                    'can'  => 'access-admin-panel',
+                    'text' => 'Plano de Contas',
+                    'url'  => 'sec/account_plans',
+                    'icon' => 'fas fa-book',
+                    'can'  => 'access-sec-panel',
                 ],
                 [
                     'text' => 'Config. Cartas Contrib.',
