@@ -1,15 +1,17 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\AccountPlanController;
+use App\Http\Controllers\Admin\CommunityController;
+use App\Http\Controllers\Admin\ContributionController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\FinancialAccountController;
+use App\Http\Controllers\Admin\FinancialEntityController;
 use App\Http\Controllers\Admin\MemberController;
 use App\Http\Controllers\Admin\ParishController;
-use App\Http\Controllers\Admin\CommunityController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\ContributionController;
 use App\Http\Controllers\Admin\ParochialUnionController;
-use App\Http\Controllers\Admin\FinancialEntityController;
 use App\Http\Controllers\Admin\RevenueOrdinaryCategoryController;
+use App\Http\Controllers\Admin\UserController;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified', 'access-admin-panel'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
@@ -36,7 +38,8 @@ Route::middleware(['auth', 'verified', 'access-admin-panel'])->prefix('admin')->
     Route::resource('users', UserController::class)->names('admin.users');
     Route::resource('financial-entities', FinancialEntityController::class)->names('admin.financial_entities');
     Route::resource('contributions', ContributionController::class)->names('admin.contributions');
-    
+    Route::resource('financial_accounts', FinancialAccountController::class)->names('admin.financial_accounts');
+
     Route::get('/members/autocomplete', [MemberController::class, 'autocomplete'])->name('admin.members.autocomplete');
     Route::get('/members/{member}/pdf', [MemberController::class, 'pdf'])->name('admin.members.pdf');
     Route::resource('/revenue-ordinary-categories', RevenueOrdinaryCategoryController::class)->names('admin.revenue-ordinary-categories');
@@ -44,4 +47,10 @@ Route::middleware(['auth', 'verified', 'access-admin-panel'])->prefix('admin')->
     // Rotas para edição da união paroquial
     Route::get('/parochial-union/edit', [ParochialUnionController::class, 'edit'])->name('admin.parochial-union.edit');
     Route::put('/parochial-union', [ParochialUnionController::class, 'update'])->name('admin.parochial-union.update');
+
+    // Plano de Contas
+    Route::prefix('account_plans')->name('admin.account_plans.')->group(function () {
+        Route::get('/', [AccountPlanController::class, 'index'])->name('index');
+        Route::get('/{accountPlan}', [AccountPlanController::class, 'show'])->name('show');
+    });
 });

@@ -16,7 +16,7 @@
 
         <ol class="breadcrumb float-sm-right">
 
-            <li class="breadcrumb-item"><a href="{{ route('sec.account_plans.index') }}">{{ __('Planos de Conta') }}</a>
+            <li class="breadcrumb-item"><a href="{{ route('admin.account_plans.index') }}">{{ __('Planos de Conta') }}</a>
             </li>
 
             <li class="breadcrumb-item active">{{ __('Detalhes') }}</li>
@@ -141,7 +141,7 @@
 
     <div class="mt-3 mb-4">
 
-        <a href="{{ route('sec.account_plans.index') }}" class="btn btn-secondary">
+        <a href="{{ route('admin.account_plans.index') }}" class="btn btn-secondary">
 
             <i class="fas fa-arrow-left mr-1"></i> {{ __('Voltar') }}
 

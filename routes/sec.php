@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Sec\AccountPlanController;
 use App\Http\Controllers\Sec\ContributionController;
 use App\Http\Controllers\Sec\DashboardController;
 use App\Http\Controllers\Sec\MemberController;
@@ -58,11 +57,5 @@ Route::middleware(['auth', 'verified', 'access-sec-panel'])->prefix('sec')->grou
         Route::get('/', [MemberReportController::class, 'index'])->name('index');
         Route::get('/pdf', [MemberReportController::class, 'exportPdf'])->name('pdf');
         Route::get('/excel', [MemberReportController::class, 'exportExcel'])->name('excel');
-    });
-
-    // Plano de Contas
-    Route::prefix('account_plans')->name('sec.account_plans.')->group(function () {
-        Route::get('/', [AccountPlanController::class, 'index'])->name('index');
-        Route::get('/{accountPlan}', [AccountPlanController::class, 'show'])->name('show');
-    });
+    }); 
 });

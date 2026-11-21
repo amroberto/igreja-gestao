@@ -47,7 +47,7 @@
                         <td>{{ $accountPlan->description }}</td>
                         <td>{{ $accountPlan->active ? __('Sim') : __('Não') }}</td>
                         <td class="text-center">
-                            <a href="{{ route('sec.account_plans.show', ['accountPlan' => $accountPlan]) }}" class="btn btn-info btn-sm" title="{{ __('Visualizar') }}">
+                            <a href="{{ route('admin.account_plans.show', ['accountPlan' => $accountPlan]) }}" class="btn btn-info btn-sm" title="{{ __('Visualizar') }}">
                                 <i class="fas fa-eye"></i>
                             </a>
                         </td>

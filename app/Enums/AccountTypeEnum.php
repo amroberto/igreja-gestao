@@ -10,6 +10,22 @@ enum AccountTypeEnum: string
     case Savings = 'savings';
     case Investment = 'investment';
 
+    public static function getValues(): array
+    {
+        return array_column(self::cases(), 'value');
+    }
+
+    public function description(): string
+    {
+        return match ($this) {
+            self::BankAccount => 'Conta Corrente',
+            self::CashDrawer => 'Caixa',
+            self::CreditCard => 'Cartão de Crédito / Débito',
+            self::Savings => 'Poupança',
+            self::Investment => 'Aplicação Financeira',
+        };
+    }
+
     public function label(): string
     {
         return match ($this) {

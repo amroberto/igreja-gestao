@@ -404,9 +404,15 @@ return [
                 //],
                 [
                     'text' => 'Plano de Contas',
-                    'url'  => 'sec/account_plans',
+                    'url'  => 'admin/account_plans',
                     'icon' => 'fas fa-book',
-                    'can'  => 'access-sec-panel',
+                    'can'  => 'access-admin-panel',
+                ],
+                [
+                    'text' => 'Contas Financeiras',
+                    'url'  => 'admin/financial_accounts',
+                    'icon' => 'fas fa-file-invoice-dollar',
+                    'can'  => 'access-admin-panel',
                 ],
                 [
                     'text' => 'Config. Cartas Contrib.',
